@@ -122,7 +122,7 @@ if (!function_exists('conversations')) {
             foreach ($conversations as $conv) {
                 if ($conv->users) {
                     foreach ($conv->users as $user) {
-                        if (empty($users[$user->id])) {
+                        if (empty($users[$user->id]) && $user->id !== \Auth::user()->id) {
                             $users[$user->id] = $user;
                         }
                     }
