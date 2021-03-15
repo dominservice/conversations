@@ -192,7 +192,7 @@ class Conversations
         }
         return false;
     }
-    
+
     /**
      * @param $userId
      * @return mixed
@@ -470,18 +470,21 @@ class Conversations
     public function getRelations(&$conversation)
     {
         $config = \Config::get('conversations.related', []);
+
         if (empty($conversation->relations)) {
             $conversation->relations = $conversation->relations()->get();
         }
-        $relations = [];
+
         if (!empty($conversation->relations)) {
-            foreach ($conversation->relations as $relation) {
+            foreach ($conversation->relations as $id=>$relation) {
                 if (!empty($config[$relation->parent_type])) {
-                    $relations[] = $config[$relation->parent_type]::where('id', $relation->parent_id)->first();
+                    $data = $config[$relation->parent_type]::where('id', $relation->parent_id)->first();
+                    $data->relation_type = $relation->parent_type;
+                    $conversation->relations[$id] = $data;
                 }
             }
         }
-        $conversation->relations = collect($relations);
+
         return $conversation;
     }
 
