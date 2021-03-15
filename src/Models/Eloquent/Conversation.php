@@ -64,7 +64,6 @@ class Conversation  extends Model
             foreach ($users as $id=>$user) {
                 if ((int)$user->id === (int)$userId) {
                     $users->forget($id);
-                    break;
                 }
             }
         }

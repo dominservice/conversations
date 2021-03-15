@@ -65,7 +65,7 @@ class Conversations
             $this->setUsers($conversation, $users);
 
             if (!empty($content)) {
-                $this->addMessage($conversation->id, auth()->user()->id, $content);
+                $this->addMessage($conversation->id, $content);
             }
             if ($getObject) {
                 return $conversation;
@@ -80,9 +80,10 @@ class Conversations
      * @param $convId
      * @param $content
      * @param false $addUser
-     * @return false|int
+     * @param false $getObject
+     * @return Message|false|int
      */
-    public function addMessage($convId, $content, $addUser = false)
+    public function addMessage($convId, $content, $addUser = false, $getObject = false)
     {
         if (!empty($convId) && !empty($content) && $conversation = $this->get($convId)) {
             $conversation->save();
@@ -120,6 +121,9 @@ class Conversations
                 $messageStatus->save();
             }
 
+            if ($getObject) {
+                return $message;
+            }
             return (int)$message->id;
         }
 
@@ -258,12 +262,19 @@ class Conversations
      */
     public function getConversations($userId, $relationType = null, $relationId = null)
     {
+        $cT = get_db_prefix().(new Conversation)->getTable();
         $conversation = Conversation::with(['users', 'relations'])
             ->whereRaw(DB::Raw("(SELECT COUNT(`message_id`)
                     FROM `{$this->messagesTable}`
                     INNER JOIN `{$this->messagesStatusTable}` ON `{$this->messagesTable}`.`id`=`{$this->messagesStatusTable}`.`message_id`
                     WHERE `user_id`='{$userId}' AND `{$this->messagesStatusTable}`.`status` NOT IN ('".self::DELETED."', '".self::ARCHIVED."')
-                ) > 0"));
+                ) > 0"))
+            ->select('*', DB::Raw("(SELECT COUNT(`message_id`)
+                    FROM `{$this->messagesTable}`
+                    INNER JOIN `{$this->messagesStatusTable}` ON `{$this->messagesTable}`.`id`=`{$this->messagesStatusTable}`.`message_id`
+                    WHERE `user_id`='{$userId}' AND `{$this->messagesStatusTable}`.`status`=('".self::UNREAD."')
+                        AND `{$this->messagesTable}`.`conversation_id`=`{$cT}`.`id`
+                ) as count_unread"));
 
         if ($relationType !== null && $relationId !== null) {
             $relT = (new ConversationRelation)->getTable();
@@ -276,6 +287,7 @@ class Conversations
         $data = $conversation->orderBy('updated_at', 'desc')->get();
 
         foreach ($data as &$datum) {
+            $datum->human_date = now()->diffForHumans($datum->updated_at, true);
             $this->getRelations($datum);
         }
 
