@@ -28,7 +28,7 @@ class Conversation  extends Model
     const COUPLE = 'couple';
 
     public function users() {
-        $userModel = \Config::get('laravel_chat.user_model', \App\User::class);
+        $userModel = \Config::get('conversations.user_model', \App\User::class);
         return $this->belongsToMany($userModel,
             'conversation_users',
             'conversation_id',

@@ -25,7 +25,7 @@ use Illuminate\Database\Eloquent\Model;
 class Message extends Model
 {
     public function sender() {
-        $userModel = \Config::get('laravel_chat.user_model', \App\User::class);
+        $userModel = \Config::get('conversations.user_model', \App\User::class);
         return $this->hasOne($userModel, 'id', 'sender_id');
     }
 

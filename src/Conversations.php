@@ -108,7 +108,7 @@ class Conversations
             //and add msg status for each user in conversation
             foreach ($usersInConv as $userInConv) {
                 $messageStatus = new MessageStatus();
-                $messageStatus->user_id = $userInConv->user_id;
+                $messageStatus->user_id = $userInConv->id;
                 $messageStatus->message_id = $message->id;
                 if ($userInConv->user_id == $userId) { //its the sender user
                     $messageStatus->self = 1;
@@ -469,7 +469,7 @@ class Conversations
      */
     public function getRelations(&$conversation)
     {
-        $config = \Config::get('laravel_chat.related', []);
+        $config = \Config::get('conversations.related', []);
         if (empty($conversation->relations)) {
             $conversation->relations = $conversation->relations()->get();
         }
