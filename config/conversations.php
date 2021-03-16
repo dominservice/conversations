@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Data Locale Parser
+ * Conversations
  *
  * This package will allow you to add a full user messaging system
  * into your Laravel application.
