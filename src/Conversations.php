@@ -207,6 +207,21 @@ class Conversations
     }
 
     /**
+     * @param int $convId
+     * @param $userId
+     * @return mixed
+     */
+    public function getConversationUnreadCount(int $convId, $userId)
+    {
+        return MessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `msg`.`id`
+              FROM `{$this->messagesTable}` `msg`
+              WHERE `msg`.`conversation_id`='{$convId}')"))
+            ->where('user_id', $userId)
+            ->where('status', self::UNREAD)
+            ->count();
+    }
+
+    /**
      * @param $convId
      * @param $userId
      */
@@ -450,10 +465,10 @@ class Conversations
     public function markUnreadAll($convId, $userId)
     {
         $messagesT = DB::getTablePrefix() . (new Message())->getTable();
-        $messageStatuses = MessageStatus::whereIn('message_id', DB::Raw("SELECT `id`
+        $messageStatuses = MessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
               FROM `{$messagesT}`
               WHERE `conversation_id`='{$convId}'
-              AND `sender_id`!='{$userId}'"))
+              AND `sender_id`!='{$userId}')"))
             ->where('status', self::READ)
             ->where('user_id', $userId)
             ->get();

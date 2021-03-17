@@ -104,6 +104,15 @@ Or short with helper
 $count = conversation_unread_count($userId = null);
 ```
 On helper if userId is null, userId = \Auth::user()->id
+#### __Get count unreaded messages in specific conversation:__
+```php
+$count = (new Dominservice\Conversations\Conversations)->getConversationUnreadCount($convId, $userId);
+```
+Or short with helper
+```php
+$count = conversation_unread_count_per_id($convId, $userId = null);
+```
+On helper if userId is null, userId = \Auth::user()->id
 #### __Delete Conversation:__
 This method tes status to DELETED for all messages in conversation for selected user.
 If all messages for all users has status DELETED remove permanently all values for conversation.
