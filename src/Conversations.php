@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Conversations
+ * Data Locale Parser
  *
  * This package will allow you to add a full user messaging system
  * into your Laravel application.
@@ -111,7 +111,7 @@ class Conversations
                 $messageStatus = new MessageStatus();
                 $messageStatus->user_id = $userInConv->id;
                 $messageStatus->message_id = $message->id;
-                if ($userInConv->user_id == $userId) { //its the sender user
+                if ($userInConv->id == $userId) { //its the sender user
                     $messageStatus->self = 1;
                     $messageStatus->status = self::READ;
                 } else { //other users in conv
@@ -391,7 +391,7 @@ class Conversations
      */
     public function markAsRead($msgId, $userId): void
     {
-        $this->markMessageAs($msgId, $userId, self::READ);
+        $this->markAs($msgId, $userId, self::READ);
     }
 
     /**
@@ -400,7 +400,7 @@ class Conversations
      */
     public function markAsUnread($msgId, $userId): void
     {
-        $this->markMessageAs($msgId, $userId, self::UNREAD);
+        $this->markAs($msgId, $userId, self::UNREAD);
     }
 
     /**
@@ -409,7 +409,7 @@ class Conversations
      */
     public function markAsDeleted($msgId, $userId): void
     {
-        $this->markMessageAs($msgId, $userId, self::DELETED);
+        $this->markAs($msgId, $userId, self::DELETED);
     }
 
     /**
@@ -418,7 +418,7 @@ class Conversations
      */
     public function markAsArchived($msgId, $userId): void
     {
-        $this->markMessageAs($msgId, $userId, self::ARCHIVED);
+        $this->markAs($msgId, $userId, self::ARCHIVED);
     }
 
     /**
@@ -427,10 +427,10 @@ class Conversations
      */
     public function markReadAll($convId, $userId)
     {
-        $messageStatuses = MessageStatus::whereIn('message_id', DB::Raw("SELECT `id`
+        $messageStatuses = MessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
               FROM `{$this->messagesTable}`
               WHERE `conversation_id`='{$convId}'
-              AND `sender_id`!='{$userId}'"))
+              AND `sender_id`!='{$userId}')"))
             ->where('status', self::UNREAD)
             ->where('user_id', $userId)
             ->get();

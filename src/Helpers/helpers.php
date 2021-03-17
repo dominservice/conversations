@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Conversations
+ * Data Locale Parser
  *
  * This package will allow you to add a full user messaging system
  * into your Laravel application.
@@ -48,7 +48,8 @@ if (!function_exists('conversation_add_message')) {
      * @param $convId
      * @param $content
      * @param false $addUser
-     * @return false|int
+     * @param false $getObject
+     * @return \Dominservice\Conversations\Models\Eloquent\Message|false|int
      */
     function conversation_add_message($convId, $content, $addUser = false, $getObject = false)
     {
