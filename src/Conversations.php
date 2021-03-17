@@ -384,16 +384,25 @@ class Conversations
     }
 
     /**
+     * @param $convId
      * @param $msgId
      * @param $userId
      * @param $status
      */
-    public function markAs($msgId, $userId, $status): void
+    public function markAs($convId, $msgId, $userId, $status): void
     {
+        $messageStatus = MessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
+              FROM `{$this->messagesTable}`
+              WHERE `conversation_id`='{$convId}'
+              AND `message_id` = {$msgId}
+              AND `sender_id`!='{$userId}')"))
+            ->where('status', self::UNREAD)
+            ->where('user_id', $userId)
+            ->first();
         if (is_int($status)
             && $status >= 0
             && $status <= 3
-            && $messageStatus = MessageStatus::where('user_id', $userId)->where('message_id', $msgId)->first()
+            && $messageStatus
         ) {
             $messageStatus->status = $status;
             $messageStatus->save();
@@ -401,39 +410,43 @@ class Conversations
     }
 
     /**
+     * @param $convId
      * @param $msgId
      * @param $userId
      */
-    public function markAsRead($msgId, $userId): void
+    public function markAsRead($convId, $msgId, $userId): void
     {
-        $this->markAs($msgId, $userId, self::READ);
+        $this->markAs($convId, $msgId, $userId, self::READ);
     }
 
     /**
+     * @param $convId
      * @param $msgId
      * @param $userId
      */
-    public function markAsUnread($msgId, $userId): void
+    public function markAsUnread($convId, $msgId, $userId): void
     {
-        $this->markAs($msgId, $userId, self::UNREAD);
+        $this->markAs($convId, $msgId, $userId, self::UNREAD);
     }
 
     /**
+     * @param $convId
      * @param $msgId
      * @param $userId
      */
-    public function markAsDeleted($msgId, $userId): void
+    public function markAsDeleted($convId, $msgId, $userId): void
     {
-        $this->markAs($msgId, $userId, self::DELETED);
+        $this->markAs($convId, $msgId, $userId, self::DELETED);
     }
 
     /**
+     * @param $convId
      * @param $msgId
      * @param $userId
      */
-    public function markAsArchived($msgId, $userId): void
+    public function markAsArchived($convId, $msgId, $userId): void
     {
-        $this->markAs($msgId, $userId, self::ARCHIVED);
+        $this->markAs($convId, $msgId, $userId, self::ARCHIVED);
     }
 
     /**

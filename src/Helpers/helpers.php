@@ -93,6 +93,19 @@ if (!function_exists('conversation_unread_count')) {
     }
 }
 
+if (!function_exists('conversation_unread_count_per_id')) {
+    /**
+     * @param $convId
+     * @param null $userId
+     * @return mixed
+     */
+    function conversation_unread_count_per_id($convId, $userId = null)
+    {
+        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        return (new Dominservice\Conversations\Conversations)->getConversationUnreadCount($convId, $userId);
+    }
+}
+
 if (!function_exists('conversation_delete')) {
     /**
      * @param $convId
@@ -169,56 +182,60 @@ if (!function_exists('conversation_messages_unread')) {
 
 if (!function_exists('conversation_mark_as_archived')) {
     /**
+     * @param $convId
      * @param $msgId
      * @param null $userId
      */
-    function conversation_mark_as_archived($msgId, $userId = null)
+    function conversation_mark_as_archived($convId, $msgId, $userId = null)
     {
         $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
-        (new Dominservice\Conversations\Conversations)->markAsArchived($msgId, $userId);
+        (new Dominservice\Conversations\Conversations)->markAsArchived($convId, $msgId, $userId);
     }
 }
 
 if (!function_exists('conversation_mark_as_deleted')) {
     /**
+     * @param $convId
      * @param $msgId
      * @param null $userId
      */
-    function conversation_mark_as_deleted($msgId, $userId = null)
+    function conversation_mark_as_deleted($convId, $msgId, $userId = null)
     {
         $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
-        (new Dominservice\Conversations\Conversations)->markAsDeleted($msgId, $userId);
+        (new Dominservice\Conversations\Conversations)->markAsDeleted($convId, $msgId, $userId);
     }
 }
 
 if (!function_exists('conversation_mark_as_unread')) {
     /**
+     * @param $convId
      * @param $msgId
      * @param null $userId
      */
-    function conversation_mark_as_unread($msgId, $userId = null)
+    function conversation_mark_as_unread($convId, $msgId, $userId = null)
     {
         $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
-        (new Dominservice\Conversations\Conversations)->markAsUnread($msgId, $userId);
+        (new Dominservice\Conversations\Conversations)->markAsUnread($convId, $msgId, $userId);
     }
 }
 
 if (!function_exists('conversation_mark_as_read')) {
     /**
+     * @param $convId
      * @param $msgId
      * @param null $userId
      */
-    function conversation_mark_as_read($msgId, $userId = null)
+    function conversation_mark_as_read($convId, $msgId, $userId = null)
     {
         $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
-        (new Dominservice\Conversations\Conversations)->markAsRead($msgId, $userId);
+        (new Dominservice\Conversations\Conversations)->markAsRead($convId, $msgId, $userId);
     }
 }
 
 if (!function_exists('conversation_mark_as_read_all')) {
     /**
      * @param $convId
-     * @param null $userId
+     * @param null|int $userId
      */
     function conversation_mark_as_read_all($convId, $userId = null)
     {

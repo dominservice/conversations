@@ -173,10 +173,10 @@ On helper if userId is null, userId = \Auth::user()->id
 #### Set status for message:
 Mark messages. If `userId` is `null` then set current user id.
 ```php
-conversation_mark_as_archived($msgId, $userId = null);
-conversation_mark_as_deleted($msgId, $userId = null);
-conversation_mark_as_unread($msgId, $userId = null);
-conversation_mark_as_read($msgId, $userId = null);
+conversation_mark_as_archived($convId, $msgId, $userId = null);
+conversation_mark_as_deleted($convId, $msgId, $userId = null);
+conversation_mark_as_unread($convId, $msgId, $userId = null);
+conversation_mark_as_read($convId, $msgId, $userId = null);
 
 conversation_mark_as_read_all($convId, $userId = null);
 conversation_mark_as_unread_all($convId, $userId = null);
