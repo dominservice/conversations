@@ -320,9 +320,9 @@ class Conversations
     public function getMessages($convId, $userId, $newToOld = true, $limit = null, $start = null)
     {
         if ($newToOld) {
-            $orderBy = 'desc';
-        } else {
             $orderBy = 'asc';
+        } else {
+            $orderBy = 'desc';
         }
         $messageT = (new Message())->getTable();
         $messageStatusT = (new MessageStatus())->getTable();
