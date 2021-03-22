@@ -517,8 +517,9 @@ class Conversations
 
         if (!empty($conversation->relations)) {
             foreach ($conversation->relations as $id=>$relation) {
-                if (!empty($config[$relation->parent_type])) {
-                    $data = $config[$relation->parent_type]::where('id', $relation->parent_id)->first();
+                if (!empty($config[$relation->parent_type])
+                    && $data = $config[$relation->parent_type]::where('id', $relation->parent_id)->first()
+                ) {
                     $data->relation_type = $relation->parent_type;
                     $conversation->relations[$id] = $data;
                 }
