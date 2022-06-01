@@ -81,7 +81,7 @@ class ConversationsServiceProvider extends ServiceProvider
         return Collection::make($this->app->databasePath().DIRECTORY_SEPARATOR.'migrations'.DIRECTORY_SEPARATOR)
             ->flatMap(function ($path) use ($filesystem, $name) {
                 return $filesystem->glob($path.'*'.$name.'.php');
-            })->push($this->app->databasePath()."/migrations/{$timestamp}{$name}.php")
+            })->push($this->app->databasePath()."/migrations/{$timestamp}_{$name}.php")
             ->first();
     }
 
