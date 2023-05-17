@@ -22,15 +22,24 @@ use Illuminate\Database\Eloquent\Model;
  * Class Message
  * @package Dominservice\Conversations\Models\Eloquent
  */
-class Message extends Model
+class ConversationMessage extends Model
 {
+    /**
+     * Get the table associated with the model.
+     *
+     * @return string
+     */
+    public function getTable()
+    {
+        return config('conversations.tables.conversation_messages');
+    }
     public function sender() {
-        $userModel = \Config::get('conversations.user_model', \App\User::class);
+        $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
         return $this->hasOne($userModel, 'id', 'sender_id');
     }
 
     public function status() {
-        return $this->hasMany(MessageStatus::class, 'message_id', 'id');
+        return $this->hasMany(ConversationMessageStatus::class, 'message_id', 'id');
     }
 
     public function statusForUser($userId = null) {

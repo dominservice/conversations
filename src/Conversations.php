@@ -19,8 +19,8 @@ use DB;
 use Dominservice\Conversations\Models\Eloquent\Conversation;
 use Dominservice\Conversations\Models\Eloquent\ConversationRelation;
 use Dominservice\Conversations\Models\Eloquent\ConversationUser;
-use Dominservice\Conversations\Models\Eloquent\Message;
-use Dominservice\Conversations\Models\Eloquent\MessageStatus;
+use Dominservice\Conversations\Models\Eloquent\ConversationMessage;
+use Dominservice\Conversations\Models\Eloquent\ConversationMessageStatus;
 use Illuminate\Support\Facades\Config;
 
 /**
@@ -42,8 +42,8 @@ class Conversations
      * Conversations constructor.
      */
     public function __construct() {
-        $this->messagesTable = DB::getTablePrefix() . (new Message())->getTable();
-        $this->messagesStatusTable = DB::getTablePrefix() . (new MessageStatus())->getTable();
+        $this->messagesTable = DB::getTablePrefix() . (new ConversationMessage())->getTable();
+        $this->messagesStatusTable = DB::getTablePrefix() . (new ConversationMessageStatus())->getTable();
     }
 
     /**
@@ -81,7 +81,7 @@ class Conversations
      * @param $content
      * @param false $addUser
      * @param false $getObject
-     * @return Message|false|int
+     * @return ConversationMessage|false|int
      */
     public function addMessage($convId, $content, $addUser = false, $getObject = false)
     {
@@ -97,7 +97,7 @@ class Conversations
                 }
             }
 
-            $message = new Message();
+            $message = new ConversationMessage();
             $message->sender_id = $userId;
             $message->conversation_id = $convId;
             $message->content = $content;
@@ -108,7 +108,7 @@ class Conversations
 
             //and add msg status for each user in conversation
             foreach ($usersInConv as $userInConv) {
-                $messageStatus = new MessageStatus();
+                $messageStatus = new ConversationMessageStatus();
                 $messageStatus->user_id = $userInConv->id;
                 $messageStatus->message_id = $message->id;
                 if ($userInConv->id == $userId) { //its the sender user
@@ -203,7 +203,7 @@ class Conversations
      */
     public function getUnreadCount($userId)
     {
-        return MessageStatus::where('user_id', $userId)->where('status', self::UNREAD)->count();
+        return ConversationMessageStatus::where('user_id', $userId)->where('status', self::UNREAD)->count();
     }
 
     /**
@@ -213,7 +213,7 @@ class Conversations
      */
     public function getConversationUnreadCount(int $convId, $userId)
     {
-        return MessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `msg`.`id`
+        return ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `msg`.`id`
               FROM `{$this->messagesTable}` `msg`
               WHERE `msg`.`conversation_id`='{$convId}')"))
             ->where('user_id', $userId)
@@ -227,7 +227,7 @@ class Conversations
      */
     public function delete($convId, $userId)
     {
-        $messageStatuses = MessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
+        $messageStatuses = ConversationMessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
               FROM `{$this->messagesTable}` `msg`
               WHERE `msg`.`conversation_id`='{$convId}'"))
             ->where('user_id', $userId)
@@ -240,7 +240,7 @@ class Conversations
             }
         }
 
-        $noDeletedCount = MessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
+        $noDeletedCount = ConversationMessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
               FROM `{$this->messagesTable}` `msg`
               WHERE `msg`.`conversation_id`='{$convId}'"))
             ->whereNotIn('status', [self::DELETED, self::ARCHIVED])
@@ -250,7 +250,7 @@ class Conversations
             $users = ConversationUser::where('conversations_id', $convId)->get();
             $messages = $con->messages;
             $relations = $con->relations;
-            $statuses = MessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
+            $statuses = ConversationMessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
                   FROM `{$this->messagesTable}` `msg`
                   WHERE `msg`.`conversation_id`='{$convId}'"))
                 ->get();
@@ -324,9 +324,9 @@ class Conversations
         } else {
             $orderBy = 'desc';
         }
-        $messageT = (new Message())->getTable();
-        $messageStatusT = (new MessageStatus())->getTable();
-        $output =  MessageStatus::select(
+        $messageT = (new ConversationMessage())->getTable();
+        $messageStatusT = (new ConversationMessageStatus())->getTable();
+        $output =  ConversationMessageStatus::select(
             DB::Raw("`{$this->messagesTable}`.`id` as `message_id`"),
             $messageT.'.content',
             $messageStatusT.'.status',
@@ -361,9 +361,9 @@ class Conversations
         } else {
             $orderBy = 'asc';
         }
-        $messageT = (new Message())->getTable();
-        $messageStatusT = (new MessageStatus())->getTable();
-        $output = MessageStatus::select(
+        $messageT = (new ConversationMessage())->getTable();
+        $messageStatusT = (new ConversationMessageStatus())->getTable();
+        $output = ConversationMessageStatus::select(
             DB::Raw("`{$this->messagesTable}`.`id` as `msg_id`"),
             $this->messagesTable.'.content',
             $this->messagesStatusTable.'.status',
@@ -391,7 +391,7 @@ class Conversations
      */
     public function markAs($convId, $msgId, $userId, $status): void
     {
-        $messageStatus = MessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
+        $messageStatus = ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
               FROM `{$this->messagesTable}`
               WHERE `conversation_id`='{$convId}'
               AND `message_id` = {$msgId}
@@ -455,7 +455,7 @@ class Conversations
      */
     public function markReadAll($convId, $userId)
     {
-        $messageStatuses = MessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
+        $messageStatuses = ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
               FROM `{$this->messagesTable}`
               WHERE `conversation_id`='{$convId}'
               AND `sender_id`!='{$userId}')"))
@@ -477,8 +477,8 @@ class Conversations
      */
     public function markUnreadAll($convId, $userId)
     {
-        $messagesT = DB::getTablePrefix() . (new Message())->getTable();
-        $messageStatuses = MessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
+        $messagesT = DB::getTablePrefix() . (new ConversationMessage())->getTable();
+        $messageStatuses = ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
               FROM `{$messagesT}`
               WHERE `conversation_id`='{$convId}'
               AND `sender_id`!='{$userId}')"))

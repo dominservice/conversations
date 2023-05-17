@@ -6,7 +6,12 @@
 This package will allow you to add a full user messaging system into your Laravel application.
 
 ### Notice
-This package is for Laravel 5.6 | 5.7 | 5.8 | 6.* | 7.* | 8.* | 9.*
+This package is for Laravel
+
+| Version | Compatibility |
+|---------|---------------|
+| 1.*     | 5.6 -->  9.*  |
+| 2.*     | 8.* --> 10.*  |
 
 ### IMPORTANT
 This package is a continuation of the

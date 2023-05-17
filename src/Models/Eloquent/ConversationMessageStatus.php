@@ -19,10 +19,19 @@ namespace Dominservice\Conversations\Models\Eloquent;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Class ConversationUsers
+ * Class MessageStatus
  * @package Dominservice\Conversations\Models\Eloquent
  */
-class ConversationUsers  extends Model
+class ConversationMessageStatus extends Model
 {
     public $timestamps = false;
+    /**
+     * Get the table associated with the model.
+     *
+     * @return string
+     */
+    public function getTable()
+    {
+        return config('conversations.tables.conversation_message_statuses');
+    }
 } 

@@ -14,8 +14,16 @@
  */
 
 return array(
-    'user_model' => \App\User::class,
+    'user_model' => \App\Models\User::class,
     'user_primary_key' => 'id',
 
-    'related' => []
+    'related' => [],
+
+    'tables' => [
+        'conversations' => 'conversations',
+        'conversation_relations' => 'conversation_relations',
+        'conversation_users' => 'conversation_users',
+        'conversation_messages' => 'conversation_messages',
+        'conversation_message_statuses' => 'conversation_message_statuses',
+    ],
 );

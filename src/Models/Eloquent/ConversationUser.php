@@ -24,7 +24,15 @@ use Illuminate\Database\Eloquent\Model;
  */
 class ConversationUser  extends Model
 {
-    protected $table = 'conversation_users';
-
     public $timestamps = false;
+
+    /**
+     * Get the table associated with the model.
+     *
+     * @return string
+     */
+    public function getTable()
+    {
+        return config('conversations.tables.conversation_users');
+    }
 } 

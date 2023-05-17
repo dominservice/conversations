@@ -27,8 +27,18 @@ class Conversation  extends Model
     const GROUP = 'group';
     const COUPLE = 'couple';
 
+    /**
+     * Get the table associated with the model.
+     *
+     * @return string
+     */
+    public function getTable()
+    {
+        return config('conversations.tables.conversations');
+    }
+
     public function users() {
-        $userModel = \Config::get('conversations.user_model', \App\User::class);
+        $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
         return $this->belongsToMany($userModel,
             'conversation_users',
             'conversation_id',
@@ -38,7 +48,7 @@ class Conversation  extends Model
 
     public function messages()
     {
-        return $this->hasMany(Message::class, 'conversation_id', 'id');
+        return $this->hasMany(ConversationMessage::class, 'conversation_id', 'id');
     }
 
     public function relations()
@@ -48,12 +58,12 @@ class Conversation  extends Model
 
     function getNumOfUsers()
     {
-        return !empty($this->users) ? $this->users->count() : 0;
+        return $this->users->count() ?? 0;
     }
 
     function getNumOfMessages()
     {
-        return !empty($this->messages) ? $this->messages->count() : 0;
+        return $this->messages->count() ?? 0;
     }
 
     function getTheOtherUser($userId = null)
@@ -77,7 +87,7 @@ class Conversation  extends Model
     }
 
     /**
-     * @return Message
+     * @return ConversationMessage
      */
     function getLastMessage()
     {

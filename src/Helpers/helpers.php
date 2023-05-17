@@ -49,7 +49,7 @@ if (!function_exists('conversation_add_message')) {
      * @param $content
      * @param false $addUser
      * @param false $getObject
-     * @return \Dominservice\Conversations\Models\Eloquent\Message|false|int
+     * @return \Dominservice\Conversations\Models\Eloquent\ConversationMessage|false|int
      */
     function conversation_add_message($convId, $content, $addUser = false, $getObject = false)
     {

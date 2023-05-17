@@ -19,12 +19,20 @@ namespace Dominservice\Conversations\Models\Eloquent;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Class ConversationUser
+ * Class ConversationRelation
  * @package Dominservice\Conversations\Models\Eloquent
  */
 class ConversationRelation  extends Model
 {
-    protected $table = 'conversation_relations';
-
     public $timestamps = false;
+
+    /**
+     * Get the table associated with the model.
+     *
+     * @return string
+     */
+    public function getTable()
+    {
+        return config('conversations.tables.conversation_relations');
+    }
 } 
