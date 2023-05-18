@@ -15,6 +15,7 @@
 
 return array(
     'user_model' => \App\Models\User::class,
+    'user_primary_key_type' => 'int', // int | uuid
     'user_primary_key' => 'id',
 
     'related' => [],

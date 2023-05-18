@@ -39,10 +39,17 @@ class Conversation  extends Model
 
     public function users() {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
+
+        if ((new $userModel)->getKeyType() === 'uuid') {
+            $userRelation = 'user_uuid';
+        } else {
+            $userRelation = 'user_id';
+        }
+
         return $this->belongsToMany($userModel,
             'conversation_users',
             'conversation_id',
-            'user_id'
+            $userRelation
         );
     }
 

@@ -55,6 +55,8 @@ Migrate
 ```
 php artisan migrate
 ```
+### REMEMBER
+Configure the package in the __config/configurations.php__ file 
 
 # Usage
 

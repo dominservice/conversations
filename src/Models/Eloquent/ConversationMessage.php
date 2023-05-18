@@ -35,7 +35,13 @@ class ConversationMessage extends Model
     }
     public function sender() {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
-        return $this->hasOne($userModel, 'id', 'sender_id');
+
+        if ((new $userModel)->getKeyType() === 'uuid') {
+            $userRelation = 'sender_uuid';
+        } else {
+            $userRelation = 'sender_id';
+        }
+        return $this->hasOne($userModel, 'id', $userRelation);
     }
 
     public function status() {
