@@ -28,8 +28,8 @@ return new class extends Migration {
     {
         if( Schema::hasTable(config('conversations.tables.conversations')) && !Schema::hasTable(config('conversations.tables.conversation_relations')) ) {
             Schema::create(config('conversations.tables.conversation_relations'), function (Blueprint $table) {
-                $table->uuid('conversation_uuid')->nullable();
-                $table->foreign('conversation_uuid')
+                $table->uuid('conversation_uuid');
+                $table->foreign('conversation_uuid', 'con_rel')
                     ->references('uuid')
                     ->on(config('conversations.tables.conversations'))
                     ->onDelete('cascade');
