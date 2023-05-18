@@ -26,8 +26,8 @@ return new class extends Migration {
      */
     public function up()
     {
-        config('conversations.tables.user_model_primary_key_type');
-        $userModel = new (config('conversations.tables.user_model'));
+        config('conversations.user_model_primary_key_type');
+        $userModel = new (config('conversations.user_model'));
 
         if (!Schema::hasTable(config('conversations.tables.conversations'))) {
             Schema::create(config('conversations.tables.conversations'), function (Blueprint $table) {

@@ -267,7 +267,7 @@ if (!function_exists('get_sender_key')) {
      */
     function get_sender_key()
     {
-        $userModel = new (config('conversations.tables.user_model'));
+        $userModel = new (config('conversations.user_model'));
         return $userModel->getKeyType() === 'uuid' ? 'sender_uuid' : 'sender_id';
     }
 }
@@ -279,7 +279,7 @@ if (!function_exists('get_user_key')) {
      */
     function get_user_key()
     {
-        $userModel = new (config('conversations.tables.user_model'));
+        $userModel = new (config('conversations.user_model'));
         return $userModel->getKeyType() === 'uuid' ? 'user_uuid' : 'user_id';
     }
 }
