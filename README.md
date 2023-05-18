@@ -79,11 +79,11 @@ $messageId = conversation_add_or_create($users, $content, $relationType = null, 
 ```
 #### __Add message to Conversation:__
 ```php
-$messageId = (new Dominservice\Conversations\Conversations)->addMessage($convId, $content, $addUser = false);
+$messageId = (new Dominservice\Conversations\Conversations)->addMessage($convUuid, $content, $addUser = false);
 ```
 Or short with helper
 ```php
-$messageId = conversation_add_message($convId, $content, $addUser = false);
+$messageId = conversation_add_message($convUuid, $content, $addUser = false);
 ```
 #### __Get Conversation ID between users:__
 ```php
@@ -95,11 +95,11 @@ $conversationId = conversation_id_between($users, $relationType = null, $relatio
 ```
 #### __Check exists user in Conversation:__
 ```php
-$existsUser = (new Dominservice\Conversations\Conversations)->existsUser($convId, $userId);
+$existsUser = (new Dominservice\Conversations\Conversations)->existsUser($convUuid, $userId);
 ```
 Or short with helper
 ```php
-$existsUser = conversation_user_exists($convId, $userId = null);
+$existsUser = conversation_user_exists($convUuid, $userId = null);
 ```
 On helper if userId is null, userId = \Auth::user()->id
 #### __Get count all unreaded messages:__
@@ -113,22 +113,22 @@ $count = conversation_unread_count($userId = null);
 On helper if userId is null, userId = \Auth::user()->id
 #### __Get count unreaded messages in specific conversation:__
 ```php
-$count = (new Dominservice\Conversations\Conversations)->getConversationUnreadCount($convId, $userId);
+$count = (new Dominservice\Conversations\Conversations)->getConversationUnreadCount($convUuid, $userId);
 ```
 Or short with helper
 ```php
-$count = conversation_unread_count_per_id($convId, $userId = null);
+$count = conversation_unread_count_per_id($convUuid, $userId = null);
 ```
 On helper if userId is null, userId = \Auth::user()->id
 #### __Delete Conversation:__
 This method tes status to DELETED for all messages in conversation for selected user.
 If all messages for all users has status DELETED remove permanently all values for conversation.
 ```php
-(new Dominservice\Conversations\Conversations)->delete($convId, $userId);
+(new Dominservice\Conversations\Conversations)->delete($convUuid, $userId);
 ```
 Or short with helper
 ```php
-conversation_delete($convId, $userId = null);
+conversation_delete($convUuid, $userId = null);
 ```
 On helper if userId is null, userId = \Auth::user()->id
 
@@ -160,33 +160,33 @@ On helper if userId is null, userId = \Auth::user()->id, and helper set array  w
 #### __Get messages of conversation:__
 
 ```php
-$messages = (new Dominservice\Conversations\Conversations)->getMessages($convId, $userId, $newToOld = true, $limit = null, $start = null);
+$messages = (new Dominservice\Conversations\Conversations)->getMessages($convUuid, $userId, $newToOld = true, $limit = null, $start = null);
 ```
 Or short with helper
 ```php
-$messages = conversation_messages($convId, $userId = null, $newToOld = true, $limit = null, $start = null);
+$messages = conversation_messages($convUuid, $userId = null, $newToOld = true, $limit = null, $start = null);
 ```
 On helper if userId is null, userId = \Auth::user()->id
 #### __Get unread messages of conversation:__
 
 ```php
-$messages = (new Dominservice\Conversations\Conversations)->getUnreadMessages($convId, $userId, $newToOld = true, $limit = null, $start = null);
+$messages = (new Dominservice\Conversations\Conversations)->getUnreadMessages($convUuid, $userId, $newToOld = true, $limit = null, $start = null);
 ```
 Or short with helper
 ```php
-$messages = conversation_messages_unread($convId, $userId = null, $newToOld = true, $limit = null, $start = null);
+$messages = conversation_messages_unread($convUuid, $userId = null, $newToOld = true, $limit = null, $start = null);
 ```
 On helper if userId is null, userId = \Auth::user()->id
 #### Set status for message:
 Mark messages. If `userId` is `null` then set current user id.
 ```php
-conversation_mark_as_archived($convId, $msgId, $userId = null);
-conversation_mark_as_deleted($convId, $msgId, $userId = null);
-conversation_mark_as_unread($convId, $msgId, $userId = null);
-conversation_mark_as_read($convId, $msgId, $userId = null);
+conversation_mark_as_archived($convUuid, $msgId, $userId = null);
+conversation_mark_as_deleted($convUuid, $msgId, $userId = null);
+conversation_mark_as_unread($convUuid, $msgId, $userId = null);
+conversation_mark_as_read($convUuid, $msgId, $userId = null);
 
-conversation_mark_as_read_all($convId, $userId = null);
-conversation_mark_as_unread_all($convId, $userId = null);
+conversation_mark_as_read_all($convUuid, $userId = null);
+conversation_mark_as_unread_all($convUuid, $userId = null);
 ```
 ### Example
 ```php

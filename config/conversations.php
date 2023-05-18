@@ -18,8 +18,6 @@ return array(
     'user_primary_key_type' => 'int', // int | uuid
     'user_primary_key' => 'id',
 
-    'related' => [],
-
     'tables' => [
         'conversations' => 'conversations',
         'conversation_relations' => 'conversation_relations',

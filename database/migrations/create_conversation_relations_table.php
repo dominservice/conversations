@@ -28,26 +28,14 @@ return new class extends Migration {
     {
         if( Schema::hasTable(config('conversations.tables.conversations')) && !Schema::hasTable(config('conversations.tables.conversation_relations')) ) {
             Schema::create(config('conversations.tables.conversation_relations'), function (Blueprint $table) {
-                $table->unsignedBigInteger('conversation_id');
-                $table->unsignedBigInteger('parent_id');
-                $table->string('parent_type');
+                $table->uuid('conversation_uuid')->nullable();
+                $table->foreign('conversation_uuid')
+                    ->references('uuid')
+                    ->on(config('conversations.tables.conversations'))
+                    ->onDelete('cascade');
+                $table->nullableMorphs('parent');
+                $table->nullableUuidMorphs('uuid_parent');
             });
-        }
-
-        if ($conversations = DB::table(config('conversations.tables.conversations'))->get()) {
-            $insert = [];
-            foreach ($conversations as $conversation) {
-                if (!empty($conversation->parent_id) && !empty($conversation->parent_type)) {
-                    $insert[] = [
-                        'conversation_id' => $conversation->id,
-                        'parent_id' => $conversation->parent_id,
-                        'parent_type' => $conversation->parent_type,
-                    ];
-                }
-            }
-            if (!empty($insert)) {
-                DB::table(config('conversations.tables.conversation_relations'))->insert($insert);
-            }
         }
 
         Schema::table(config('conversations.tables.conversations'), function (Blueprint $table) {
@@ -68,13 +56,6 @@ return new class extends Migration {
                 $table->unsignedBigInteger('parent_id');
                 $table->string('parent_type');
             });
-            if ($relations = DB::table(config('conversations.tables.conversation_relations'))->groupBy('conversation_id')->get()) {
-                foreach ($relations as $relation) {
-                    DB::table(config('conversations.tables.conversations'))
-                        ->where('conversation_id', $relation->id)
-                        ->update(['parent_id' => $relation->parent_id, 'parent_type' => $relation->parent_type]);
-                }
-            }
             Schema::drop(config('conversations.tables.conversation_relations'));
         }
     }

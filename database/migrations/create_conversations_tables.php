@@ -31,7 +31,7 @@ return new class extends Migration {
 
         if (!Schema::hasTable(config('conversations.tables.conversations'))) {
             Schema::create(config('conversations.tables.conversations'), function (Blueprint $table) {
-                $table->id();
+                $table->uuid();
                 $table->unsignedBigInteger('parent_id');
                 $table->string('parent_type');
                 $table->softDeletes();
@@ -40,8 +40,9 @@ return new class extends Migration {
         }
         if (!Schema::hasTable(config('conversations.tables.conversation_users'))) {
             Schema::create(config('conversations.tables.conversation_users'), function (Blueprint $table) use($userModel) {
-                $table->foreignId('conversation_id')
-                    ->references('id')
+                $table->uuid('conversation_uuid')->nullable();
+                $table->foreign('conversation_uuid')
+                    ->references('uuid')
                     ->on(config('conversations.tables.conversations'))
                     ->onDelete('cascade');
 
@@ -51,20 +52,25 @@ return new class extends Migration {
                         ->references($userModel->getKeyName())
                         ->on($userModel->getTable())
                         ->onDelete('set null');
-                    $table->primary(array('conversation_id', 'user_uuid'));
+                    $table->primary(array('conversation_uuid', 'user_uuid'));
                 } else {
                     $table->foreignId('user_id')
                         ->nullable()
                         ->references($userModel->getKeyName())
                         ->on($userModel->getTable())
                         ->onDelete('set null');
-                    $table->primary(array('conversation_id', 'user_id'));
+                    $table->primary(array('conversation_uuid', 'user_id'));
                 }
             });
         }
         if (!Schema::hasTable(config('conversations.tables.conversation_messages'))) {
             Schema::create(config('conversations.tables.conversation_messages'), function (Blueprint $table) use($userModel) {
                 $table->id();
+                $table->uuid('conversation_uuid')->nullable();
+                $table->foreign('conversation_uuid')
+                    ->references('uuid')
+                    ->on(config('conversations.tables.conversations'))
+                    ->onDelete('cascade');
 
                 if ($userModel->getKeyType() === 'uuid') {
                     $table->uuid('sender_uuid')->nullable();
@@ -72,26 +78,20 @@ return new class extends Migration {
                         ->references($userModel->getKeyName())
                         ->on($userModel->getTable())
                         ->onDelete('set null');
-                    $table->primary(array('conversation_id', 'sender_uuid'));
+                    $table->primary(array('conversation_uuid', 'sender_uuid'));
                 } else {
                     $table->foreignId('sender_id')
                         ->nullable()
                         ->references($userModel->getKeyName())
                         ->on($userModel->getTable())
                         ->onDelete('set null');
-                    $table->primary(array('conversation_id', 'sender_id'));
+                    $table->primary(array('conversation_uuid', 'sender_id'));
                 }
 
-                $table->foreignId('conversation_id')
-                    ->references('id')
-                    ->on(config('conversations.tables.conversations'))
-                    ->onDelete('cascade');
-
                 $table->text('content');
-                $table->string('type');
                 $table->timestamps();
                 $table->index('sender_id');
-                $table->index('conversation_id');
+                $table->index('conversation_uuid');
             });
         }
         if (!Schema::hasTable(config('conversations.tables.conversation_message_statuses'))) {

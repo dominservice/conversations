@@ -28,7 +28,12 @@ return new class extends Migration {
     {
         if (Schema::hasTable(config('conversations.tables.conversations'))) {
             Schema::table(config('conversations.tables.conversations'), function (Blueprint $table) {
-                $table->string('title');
+                $table->string('title')->nullable();
+            });
+        }
+        if (Schema::hasTable(config('conversations.tables.conversation_messages'))) {
+            Schema::table(config('conversations.tables.conversation_messages'), function (Blueprint $table) {
+                $table->string('type')->default('text');
             });
         }
     }
@@ -40,6 +45,11 @@ return new class extends Migration {
      */
     public function down()
     {
+        if (Schema::hasTable(config('conversations.tables.conversation_messages'))) {
+            Schema::table(config('conversations.tables.conversation_messages'), function (Blueprint $table) {
+                $table->dropColumn('type');
+            });
+        }
         if (Schema::hasTable(config('conversations.tables.conversations'))) {
             Schema::table(config('conversations.tables.conversations'), function (Blueprint $table) {
                 $table->dropColumn('title');

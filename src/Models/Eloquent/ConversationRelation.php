@@ -16,6 +16,7 @@
 namespace Dominservice\Conversations\Models\Eloquent;
 
 
+use Dominservice\Conversations\Traits\ParentMorph;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -24,6 +25,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class ConversationRelation  extends Model
 {
+    use ParentMorph;
+
     public $timestamps = false;
 
     /**
@@ -34,5 +37,21 @@ class ConversationRelation  extends Model
     public function getTable()
     {
         return config('conversations.tables.conversation_relations');
+    }
+
+    /**
+     * Get the owning commentable model.
+     */
+    public function parent()
+    {
+        return $this->morphTo();
+    }
+
+    /**
+     * Get the owning commentable model.
+     */
+    public function uuidParent()
+    {
+        return $this->morphTo('uuid_parent');
     }
 } 
