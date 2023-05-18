@@ -56,7 +56,7 @@ Migrate
 php artisan migrate
 ```
 ### REMEMBER
-Configure the package in the __config/configurations.php__ file 
+Configure the package in the __config/conversations.php__ file 
 
 # Usage
 
