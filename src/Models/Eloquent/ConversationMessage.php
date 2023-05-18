@@ -24,6 +24,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class ConversationMessage extends Model
 {
+    const TYPE_TEXT = 'text';
+    const TYPE_ANCHOR = 'anchor';
+    const TYPE_ATTACHMENT = 'attachment';
     /**
      * Get the table associated with the model.
      *
@@ -36,12 +39,7 @@ class ConversationMessage extends Model
     public function sender() {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
 
-        if ((new $userModel)->getKeyType() === 'uuid') {
-            $userRelation = 'sender_uuid';
-        } else {
-            $userRelation = 'sender_id';
-        }
-        return $this->hasOne($userModel, 'id', $userRelation);
+        return $this->hasOne($userModel, 'id', get_sender_key());
     }
 
     public function status() {
@@ -53,7 +51,7 @@ class ConversationMessage extends Model
 
         if (!empty($this->status)) {
             foreach ($this->status as $status) {
-                if ((int)$status->user_id === (int)$userId) {
+                if ((int)$status->{get_user_key()} === (int)$userId) {
                     return $status;
                 }
             }

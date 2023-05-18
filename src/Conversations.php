@@ -21,7 +21,6 @@ use Dominservice\Conversations\Models\Eloquent\ConversationRelation;
 use Dominservice\Conversations\Models\Eloquent\ConversationUser;
 use Dominservice\Conversations\Models\Eloquent\ConversationMessage;
 use Dominservice\Conversations\Models\Eloquent\ConversationMessageStatus;
-use Illuminate\Support\Facades\Config;
 
 /**
  * Class Conversations
@@ -29,7 +28,6 @@ use Illuminate\Support\Facades\Config;
  */
 class Conversations
 {
-
     const DELETED = 0;
     const UNREAD = 1;
     const READ = 2;
@@ -77,29 +75,29 @@ class Conversations
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $content
      * @param false $addUser
      * @param false $getObject
      * @return ConversationMessage|false|int
      */
-    public function addMessage($convId, $content, $addUser = false, $getObject = false)
+    public function addMessage($convUuid, $content, $addUser = false, $getObject = false)
     {
-        if (!empty($convId) && !empty($content) && $conversation = $this->get($convId)) {
+        if (!empty($convUuid) && !empty($content) && $conversation = $this->get($convUuid)) {
             $conversation->save();
-            $userId = auth()->user()->id;
+            $userId = \Auth::user()->id;
 
-            if (!$this->existsUser($convId, $userId)) {
+            if (!$this->existsUser($convUuid, $userId)) {
                 if ($addUser) {
-                    $this->setUsers($conversation, $users);
+                    $this->setUsers($conversation, $userId);
                 } else {
                     return false;
                 }
             }
 
             $message = new ConversationMessage();
-            $message->sender_id = $userId;
-            $message->conversation_id = $convId;
+            $message->{get_sender_key()} = $userId;
+            $message->conversation_uuid = $convUuid;
             $message->content = $content;
             $message->save();
 
@@ -109,7 +107,7 @@ class Conversations
             //and add msg status for each user in conversation
             foreach ($usersInConv as $userInConv) {
                 $messageStatus = new ConversationMessageStatus();
-                $messageStatus->user_id = $userInConv->id;
+                $messageStatus->{get_user_key()} = $userInConv->id;
                 $messageStatus->message_id = $message->id;
                 if ($userInConv->id == $userId) { //its the sender user
                     $messageStatus->self = 1;
@@ -159,37 +157,37 @@ class Conversations
      */
     public function getIdBetweenUsers(array $users, $relationType = null, $relationId = null)
     {
-        $results = ConversationUser::select('conversation_id');
+        $results = ConversationUser::select('conversation_uuid');
         if (!empty($relationType) && !empty($relationId)) {
             $uT = DB::getTablePrefix().(new ConversationUser)->getTable();
             $cT = DB::getTablePrefix().(new Conversation)->getTable();
             $results->whereRaw(DB::Raw("(SELECT COUNT(`parent_id`)
                     FROM `{$cT}`
-                    WHERE `{$cT}`.`conversation_id`=`{$uT}`.`conversation_id`
+                    WHERE `{$cT}`.`conversation_uuid`=`{$uT}`.`conversation_uuid`
                      AND `{$cT}`.`parent_id`='{$relationId}'
                      AND `{$cT}`.`parent_type`='{$relationType}'
                 ) > 0"));
         }
-        $results->whereIn('user_id', $users)
-            ->groupBy('conversation_id')
-            ->havingRaw("COUNT(conversation_id)=2");
+        $results->whereIn(get_user_key(), $users)
+            ->groupBy('conversation_uuid')
+            ->havingRaw("COUNT(conversation_uuid)=2");
 
         if ($results = $results->first()) {
-            return (int)$results->conversation_id;
+            return (int)$results->conversation_uuid;
         }
 
         return false;
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $userId
      * @return bool
      */
-    public function existsUser($convId, $userId): bool
+    public function existsUser($convUuid, $userId): bool
     {
-        $resp = ConversationUser::where('user_id', $userId)
-            ->where('conversation_id', $convId)
+        $resp = ConversationUser::where(get_user_key(), $userId)
+            ->where('conversation_uuid', $convUuid)
             ->count();
         if($resp) {
             return true;
@@ -203,34 +201,34 @@ class Conversations
      */
     public function getUnreadCount($userId)
     {
-        return ConversationMessageStatus::where('user_id', $userId)->where('status', self::UNREAD)->count();
+        return ConversationMessageStatus::where(get_user_key(), $userId)->where('status', self::UNREAD)->count();
     }
 
     /**
-     * @param int $convId
+     * @param int $convUuid
      * @param $userId
      * @return mixed
      */
-    public function getConversationUnreadCount(int $convId, $userId)
+    public function getConversationUnreadCount(int $convUuid, $userId)
     {
         return ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `msg`.`id`
               FROM `{$this->messagesTable}` `msg`
-              WHERE `msg`.`conversation_id`='{$convId}')"))
-            ->where('user_id', $userId)
+              WHERE `msg`.`conversation_uuid`='{$convUuid}')"))
+            ->where(get_user_key(), $userId)
             ->where('status', self::UNREAD)
             ->count();
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $userId
      */
-    public function delete($convId, $userId)
+    public function delete($convUuid, $userId)
     {
         $messageStatuses = ConversationMessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
               FROM `{$this->messagesTable}` `msg`
-              WHERE `msg`.`conversation_id`='{$convId}'"))
-            ->where('user_id', $userId)
+              WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
+            ->where(get_user_key(), $userId)
             ->get();
 
         if($messageStatuses) {
@@ -242,17 +240,17 @@ class Conversations
 
         $noDeletedCount = ConversationMessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
               FROM `{$this->messagesTable}` `msg`
-              WHERE `msg`.`conversation_id`='{$convId}'"))
+              WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
             ->whereNotIn('status', [self::DELETED, self::ARCHIVED])
             ->count();
 
-        if ($noDeletedCount === 0 && $con = Conversation::find($convId)) {
-            $users = ConversationUser::where('conversations_id', $convId)->get();
+        if ($noDeletedCount === 0 && $con = Conversation::find($convUuid)) {
+            $users = ConversationUser::where('conversations_id', $convUuid)->get();
             $messages = $con->messages;
             $relations = $con->relations;
             $statuses = ConversationMessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
                   FROM `{$this->messagesTable}` `msg`
-                  WHERE `msg`.`conversation_id`='{$convId}'"))
+                  WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
                 ->get();
             foreach ($users as $user) {
                 $user->delete();
@@ -263,8 +261,8 @@ class Conversations
             foreach ($relations as $relation) {
                 $relation->delete();
             }
-            foreach ($statuses as $statuse) {
-                $statuse->delete();
+            foreach ($statuses as $status) {
+                $status->delete();
             }
         }
     }
@@ -277,25 +275,25 @@ class Conversations
      */
     public function getConversations($userId, $relationType = null, $relationId = null)
     {
-        $cT = get_db_prefix().(new Conversation)->getTable();
+        $cT = DB::getTablePrefix().(new Conversation)->getTable();
         $conversation = Conversation::with(['users', 'relations'])
             ->whereRaw(DB::Raw("(SELECT COUNT(`message_id`)
                     FROM `{$this->messagesTable}`
                     INNER JOIN `{$this->messagesStatusTable}` ON `{$this->messagesTable}`.`id`=`{$this->messagesStatusTable}`.`message_id`
-                    WHERE `user_id`='{$userId}' AND `{$this->messagesStatusTable}`.`status` NOT IN ('".self::DELETED."', '".self::ARCHIVED."')
+                    WHERE `".get_user_key()."`='{$userId}' AND `{$this->messagesStatusTable}`.`status` NOT IN ('".self::DELETED."', '".self::ARCHIVED."')
                 ) > 0"))
             ->select('*', DB::Raw("(SELECT COUNT(`message_id`)
                     FROM `{$this->messagesTable}`
                     INNER JOIN `{$this->messagesStatusTable}` ON `{$this->messagesTable}`.`id`=`{$this->messagesStatusTable}`.`message_id`
-                    WHERE `user_id`='{$userId}' AND `{$this->messagesStatusTable}`.`status`=('".self::UNREAD."')
-                        AND `{$this->messagesTable}`.`conversation_id`=`{$cT}`.`id`
+                    WHERE `".get_user_key()."`='{$userId}' AND `{$this->messagesStatusTable}`.`status`=('".self::UNREAD."')
+                        AND `{$this->messagesTable}`.`conversation_uuid`=`{$cT}`.`id`
                 ) as count_unread"));
 
         if ($relationType !== null && $relationId !== null) {
             $relT = (new ConversationRelation)->getTable();
             $cT = (new Conversation)->getTable();
             $conversation->select($cT.'.*');
-            $conversation->join($relT, $relT.'.conversation_id', $cT.'.id');
+            $conversation->join($relT, $relT.'.conversation_uuid', $cT.'.id');
             $conversation->where($relT.'.parent_type', $relationType)->where($relT.'.parent_id', $relationId);
         }
 
@@ -310,14 +308,14 @@ class Conversations
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $userId
      * @param bool $newToOld
      * @param null $limit
      * @param null $start
      * @return mixed
      */
-    public function getMessages($convId, $userId, $newToOld = true, $limit = null, $start = null)
+    public function getMessages($convUuid, $userId, $newToOld = true, $limit = null, $start = null)
     {
         if ($newToOld) {
             $orderBy = 'asc';
@@ -331,11 +329,11 @@ class Conversations
             $messageT.'.content',
             $messageStatusT.'.status',
             $messageT.'.created_at',
-            DB::Raw("`{$this->messagesTable}`.`sender_id` as `user_id`")
+            DB::Raw("`{$this->messagesTable}`.`".get_sender_key()."` as `".get_user_key()."`")
         )
             ->join($messageT, $messageT.'.id', $messageStatusT.'.message_id')
-            ->where($messageT.'.conversation_id', $convId)
-            ->where($messageStatusT.'.user_id', $userId)
+            ->where($messageT.'.conversation_uuid', $convUuid)
+            ->where($messageStatusT.'.'.get_user_key(), $userId)
             ->whereNotIn($messageStatusT.'.status', [self::DELETED, self::ARCHIVED])
             ->orderBy($messageT.'.created_at', $orderBy);
 
@@ -347,14 +345,14 @@ class Conversations
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $userId
      * @param bool $newToOld
      * @param null $limit
      * @param null $start
      * @return mixed
      */
-    public function getUnreadMessages($convId, $userId, $newToOld = true, $limit = null, $start = null)
+    public function getUnreadMessages($convUuid, $userId, $newToOld = true, $limit = null, $start = null)
     {
         if ($newToOld) {
             $orderBy = 'desc';
@@ -368,11 +366,11 @@ class Conversations
             $this->messagesTable.'.content',
             $this->messagesStatusTable.'.status',
             $this->messagesTable.'.created_at',
-            DB::Raw("`{$this->messagesTable}`.`sender_id` as `user_id`")
+            DB::Raw("`{$this->messagesTable}`.`".get_sender_key()."` as `".get_user_key()."`")
         )
             ->join($messageT, $messageT.'.id', $messageStatusT.'.message_id')
-            ->where($messageT.'.conversation_id', $convId)
-            ->where($messageStatusT.'.user_id', $userId)
+            ->where($messageT.'.conversation_uuid', $convUuid)
+            ->where($messageStatusT.'.'.get_user_key(), $userId)
             ->where($messageStatusT.'.status', self::UNREAD)
             ->orderBy($messageT.'.created_at', $orderBy);
 
@@ -384,20 +382,20 @@ class Conversations
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $msgId
      * @param $userId
      * @param $status
      */
-    public function markAs($convId, $msgId, $userId, $status): void
+    public function markAs($convUuid, $msgId, $userId, $status): void
     {
         $messageStatus = ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
               FROM `{$this->messagesTable}`
-              WHERE `conversation_id`='{$convId}'
+              WHERE `conversation_uuid`='{$convUuid}'
               AND `message_id` = {$msgId}
-              AND `sender_id`!='{$userId}')"))
+              AND `".get_sender_key()."`!='{$userId}')"))
             ->where('status', self::UNREAD)
-            ->where('user_id', $userId)
+            ->where(get_user_key(), $userId)
             ->first();
         if (is_int($status)
             && $status >= 0
@@ -410,57 +408,57 @@ class Conversations
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $msgId
      * @param $userId
      */
-    public function markAsRead($convId, $msgId, $userId): void
+    public function markAsRead($convUuid, $msgId, $userId): void
     {
-        $this->markAs($convId, $msgId, $userId, self::READ);
+        $this->markAs($convUuid, $msgId, $userId, self::READ);
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $msgId
      * @param $userId
      */
-    public function markAsUnread($convId, $msgId, $userId): void
+    public function markAsUnread($convUuid, $msgId, $userId): void
     {
-        $this->markAs($convId, $msgId, $userId, self::UNREAD);
+        $this->markAs($convUuid, $msgId, $userId, self::UNREAD);
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $msgId
      * @param $userId
      */
-    public function markAsDeleted($convId, $msgId, $userId): void
+    public function markAsDeleted($convUuid, $msgId, $userId): void
     {
-        $this->markAs($convId, $msgId, $userId, self::DELETED);
+        $this->markAs($convUuid, $msgId, $userId, self::DELETED);
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $msgId
      * @param $userId
      */
-    public function markAsArchived($convId, $msgId, $userId): void
+    public function markAsArchived($convUuid, $msgId, $userId): void
     {
-        $this->markAs($convId, $msgId, $userId, self::ARCHIVED);
+        $this->markAs($convUuid, $msgId, $userId, self::ARCHIVED);
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $userId
      */
-    public function markReadAll($convId, $userId)
+    public function markReadAll($convUuid, $userId)
     {
         $messageStatuses = ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
               FROM `{$this->messagesTable}`
-              WHERE `conversation_id`='{$convId}'
-              AND `sender_id`!='{$userId}')"))
+              WHERE `conversation_uuid`='{$convUuid}'
+              AND `".get_sender_key()."`!='{$userId}')"))
             ->where('status', self::UNREAD)
-            ->where('user_id', $userId)
+            ->where(get_user_key(), $userId)
             ->get();
 
         if($messageStatuses) {
@@ -472,18 +470,18 @@ class Conversations
     }
 
     /**
-     * @param $convId
+     * @param $convUuid
      * @param $userId
      */
-    public function markUnreadAll($convId, $userId)
+    public function markUnreadAll($convUuid, $userId)
     {
         $messagesT = DB::getTablePrefix() . (new ConversationMessage())->getTable();
         $messageStatuses = ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
               FROM `{$messagesT}`
-              WHERE `conversation_id`='{$convId}'
-              AND `sender_id`!='{$userId}')"))
+              WHERE `conversation_uuid`='{$convUuid}'
+              AND `".get_sender_key()."`!='{$userId}')"))
             ->where('status', self::READ)
-            ->where('user_id', $userId)
+            ->where(get_user_key(), $userId)
             ->get();
 
         if($messageStatuses) {
@@ -509,20 +507,22 @@ class Conversations
      */
     public function getRelations(&$conversation)
     {
-        $config = \Config::get('conversations.related', []);
-
         if (empty($conversation->relations)) {
-            $conversation->relations = $conversation->relations()->get();
+            $conversation->relations = $conversation->relations()->with(['parent', 'uuidParent'])->get();
         }
 
         if (!empty($conversation->relations)) {
-            foreach ($conversation->relations as $id=>$relation) {
-                if (!empty($config[$relation->parent_type])
-                    && $data = $config[$relation->parent_type]::where('id', $relation->parent_id)->first()
-                ) {
-                    $data->relation_type = $relation->parent_type;
-                    $conversation->relations[$id] = $data;
+            $relations = collect();
+            foreach ($conversation->relations as $relation) {
+                if ($relation->parent) {
+                    $relations->push($relation->parent);
                 }
+
+                if ($relation->uuidParent) {
+                    $relations->push($relation->uuidParent);
+                }
+
+                $conversation->relationsList = $relations;
             }
         }
 
@@ -545,13 +545,13 @@ class Conversations
                         $this->setRelations($conversation, $type, $id);
                     }                }
             } elseif (!is_null($relationId)
-                && !$exists = ConversationRelation::where('conversation_id', $conversation->id)
+                && !$exists = ConversationRelation::where('conversation_uuid', $conversation->id)
                     ->where('parent_type', $relationType)
                     ->where('parent_id', $relationId)
                     ->first()
             ) {
                 $relation = new ConversationRelation();
-                $relation->conversation_id = $conversation->id;
+                $relation->conversation_uuid = $conversation->id;
                 $relation->parent_type = $relationType;
                 $relation->parent_id = $relationId;
 
@@ -574,12 +574,12 @@ class Conversations
             foreach ($userId as $id) {
                 $this->setUsers($conversation, $id);
             }
-        } elseif (!$exists = ConversationUser::where('conversation_id', $conversation->id)
-            ->where('user_id', $userId)->first()
+        } elseif (!$exists = ConversationUser::where('conversation_uuid', $conversation->id)
+            ->where(get_user_key(), $userId)->first()
         ) {
             $conversationUser = new ConversationUser();
-            $conversationUser->conversation_id = $conversation->id;
-            $conversationUser->user_id = $userId;
+            $conversationUser->conversation_uuid = $conversation->id;
+            $conversationUser->{get_user_key()} = $userId;
             $conversationUser->save();
             $users[] = $conversationUser;
         }

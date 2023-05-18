@@ -27,6 +27,21 @@ class Conversation  extends Model
     const GROUP = 'group';
     const COUPLE = 'couple';
 
+    const TYPE_SINGLE = 'single';
+    const TYPE_GROUP = 'group';
+    const TYPE_MAIL = 'mail';
+    const TYPE_SUPPORT = 'support';
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'title',
+        'type',
+    ];
+
     /**
      * Get the table associated with the model.
      *
@@ -40,27 +55,21 @@ class Conversation  extends Model
     public function users() {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
 
-        if ((new $userModel)->getKeyType() === 'uuid') {
-            $userRelation = 'user_uuid';
-        } else {
-            $userRelation = 'user_id';
-        }
-
         return $this->belongsToMany($userModel,
             'conversation_users',
-            'conversation_id',
-            $userRelation
+            'conversation_uuid',
+            get_user_key()
         );
     }
 
     public function messages()
     {
-        return $this->hasMany(ConversationMessage::class, 'conversation_id', 'id');
+        return $this->hasMany(ConversationMessage::class, 'conversation_uuid', 'id');
     }
 
     public function relations()
     {
-        return $this->hasMany(ConversationRelation::class, 'conversation_id', 'id');
+        return $this->hasMany(ConversationRelation::class, 'conversation_uuid', 'id');
     }
 
     function getNumOfUsers()
