@@ -26,11 +26,12 @@ return new class extends Migration {
      */
     public function up()
     {
-        if (Schema::hasTable(config('conversations.tables.conversation_types'))) {
+        if (!Schema::hasTable(config('conversations.tables.conversation_types'))) {
             Schema::create(config('conversations.tables.conversation_types'), function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
-                $table->bool('custom');
+                $table->string('color', 10);
+                $table->boolean('custom')->default(1);
                 $table->timestamps();
                 $table->softDeletes();
             });

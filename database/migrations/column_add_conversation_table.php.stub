@@ -29,17 +29,21 @@ return new class extends Migration {
         if (Schema::hasTable(config('conversations.tables.conversations'))) {
             Schema::table(config('conversations.tables.conversations'), function (Blueprint $table) {
                 $table->string('title')->after('uuid')->nullable();
-                $table->string('type')->after('title')->default('single');
+                $table->foreignId('type')->after('title')->nullable()
+                    ->references('id')
+                    ->on(config('conversations.tables.conversation_types'))
+                    ->onDelete('cascade');
+
                 $userModel = new (config('conversations.user_model'));
                 if ($userModel->getKeyType() === 'uuid') {
-                    $table->uuid('owner_uuid')->nullable();
+                    $table->uuid('owner_uuid')->after('uuid')->nullable();
                     $table->foreign('owner_uuid')
                         ->references($userModel->getKeyName())
                         ->on($userModel->getTable())
                         ->onDelete('set null');
                     $table->index('owner_uuid');
                 } else {
-                    $table->foreignId('owner_id')
+                    $table->foreignId('owner_id')->after('uuid')
                         ->nullable()
                         ->references($userModel->getKeyName())
                         ->on($userModel->getTable())
