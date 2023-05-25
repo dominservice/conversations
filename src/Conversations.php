@@ -205,11 +205,11 @@ class Conversations
     }
 
     /**
-     * @param int $convUuid
+     * @param $convUuid
      * @param $userId
      * @return mixed
      */
-    public function getConversationUnreadCount(int $convUuid, $userId)
+    public function getConversationUnreadCount($convUuid, $userId)
     {
         return ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `msg`.`id`
               FROM `{$this->messagesTable}` `msg`

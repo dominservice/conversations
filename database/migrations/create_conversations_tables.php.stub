@@ -33,8 +33,8 @@ return new class extends Migration {
                 $table->uuid()->primary();
                 $table->unsignedBigInteger('parent_id');
                 $table->string('parent_type');
-                $table->softDeletes();
                 $table->timestamps();
+                $table->softDeletes();
             });
         }
         if (!Schema::hasTable(config('conversations.tables.conversation_users'))) {

@@ -30,6 +30,22 @@ return new class extends Migration {
             Schema::table(config('conversations.tables.conversations'), function (Blueprint $table) {
                 $table->string('title')->after('uuid')->nullable();
                 $table->string('type')->after('title')->default('single');
+                $userModel = new (config('conversations.user_model'));
+                if ($userModel->getKeyType() === 'uuid') {
+                    $table->uuid('owner_uuid')->nullable();
+                    $table->foreign('owner_uuid')
+                        ->references($userModel->getKeyName())
+                        ->on($userModel->getTable())
+                        ->onDelete('set null');
+                    $table->index('owner_uuid');
+                } else {
+                    $table->foreignId('owner_id')
+                        ->nullable()
+                        ->references($userModel->getKeyName())
+                        ->on($userModel->getTable())
+                        ->onDelete('set null');
+                    $table->index('owner_id');
+                }
             });
         }
         if (Schema::hasTable(config('conversations.tables.conversation_messages'))) {
@@ -55,6 +71,12 @@ return new class extends Migration {
             Schema::table(config('conversations.tables.conversations'), function (Blueprint $table) {
                 $table->dropColumn('title');
                 $table->dropColumn('type');
+                $userModel = new (config('conversations.user_model'));
+                if ($userModel->getKeyType() === 'uuid') {
+                    $table->dropColumn('owner_uuid');
+                } else {
+                    $table->dropColumn('owner_id');
+                }
             });
         }
     }

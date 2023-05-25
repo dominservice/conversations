@@ -24,5 +24,6 @@ return array(
         'conversation_users' => 'conversation_users',
         'conversation_messages' => 'conversation_messages',
         'conversation_message_statuses' => 'conversation_message_statuses',
+        'conversation_types' => 'conversation_types',
     ],
 );

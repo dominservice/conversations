@@ -17,6 +17,7 @@ namespace Dominservice\Conversations\Models\Eloquent;
 
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Class Conversation
@@ -24,6 +25,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Conversation  extends Model
 {
+    use SoftDeletes;
+
     const GROUP = 'group';
     const COUPLE = 'couple';
 
@@ -41,6 +44,8 @@ class Conversation  extends Model
         'title',
         'type',
     ];
+
+    private $unreadedMessagesCount;
 
     /**
      * Get the table associated with the model.
@@ -64,12 +69,12 @@ class Conversation  extends Model
 
     public function messages()
     {
-        return $this->hasMany(ConversationMessage::class, 'conversation_uuid', 'id');
+        return $this->hasMany(ConversationMessage::class, 'conversation_uuid', 'uuid');
     }
 
     public function relations()
     {
-        return $this->hasMany(ConversationRelation::class, 'conversation_uuid', 'id');
+        return $this->hasMany(ConversationRelation::class, 'conversation_uuid', 'uuid');
     }
 
     function getNumOfUsers()
@@ -117,5 +122,21 @@ class Conversation  extends Model
         if ( $this->getNumOfUsers() > 2 )
             return self::GROUP;
         return self::COUPLE;
+    }
+
+    public function hasUnreadedMessages()
+    {
+        if ($this->unreadedMessagesCount === null) {
+            $this->unreadedMessagesCount = conversation_unread_count_per_id($this->uuid);
+        }
+
+        return $this->unreadedMessagesCount > 0;
+    }
+
+    public function getLastMessageDateHuman()
+    {
+        $lastMessage = $this->messages()->orderByDesc('created_at')->first();
+
+        return now()->diffForHumans($lastMessage->created_at, true);
     }
 }

@@ -52,6 +52,11 @@ class ConversationsServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/../database/migrations/column_add_conversation_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_table'),
         ], 'migrations');
+
+        sleep(1);
+        $this->publishes([
+            __DIR__.'/../database/migrations/create_conversation_types_table.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversation_types_table'),
+        ], 'migrations');
     }
 
 	/**
