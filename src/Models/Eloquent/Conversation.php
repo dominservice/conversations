@@ -77,6 +77,11 @@ class Conversation  extends Model
         return $this->hasMany(ConversationRelation::class, 'conversation_uuid', 'uuid');
     }
 
+    public function type()
+    {
+        return $this->hasOne(ConversationType::class, 'id', 'type_id');
+    }
+
     function getNumOfUsers()
     {
         return $this->users->count() ?? 0;
