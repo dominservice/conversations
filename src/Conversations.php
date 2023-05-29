@@ -85,7 +85,10 @@ class Conversations
     {
         if (!empty($convUuid) && !empty($content) && $conversation = $this->get($convUuid)) {
             $conversation->save();
-            $userId = \Auth::user()->id;
+
+            
+
+            $userId = \Auth::user()->{\Auth::user()->getKeyName()};
 
             if (!$this->existsUser($convUuid, $userId)) {
                 if ($addUser) {
@@ -107,7 +110,7 @@ class Conversations
             //and add msg status for each user in conversation
             foreach ($usersInConv as $userInConv) {
                 $messageStatus = new ConversationMessageStatus();
-                $messageStatus->{get_user_key()} = $userInConv->id;
+                $messageStatus->{get_user_key()} = $userInConv->{\Auth::user()->getKeyName()};
                 $messageStatus->message_id = $message->id;
                 if ($userInConv->id == $userId) { //its the sender user
                     $messageStatus->self = 1;
@@ -244,7 +247,7 @@ class Conversations
             ->whereNotIn('status', [self::DELETED, self::ARCHIVED])
             ->count();
 
-        if ($noDeletedCount === 0 && $con = Conversation::find($convUuid)) {
+        if ($noDeletedCount === 0 && $con = Conversation::uuid($convUuid)) {
             $users = ConversationUser::where('conversations_id', $convUuid)->get();
             $messages = $con->messages;
             $relations = $con->relations;
@@ -493,12 +496,12 @@ class Conversations
     }
 
     /**
-     * @param $id
+     * @param $uuid
      * @return mixed
      */
-    public function get($id)
+    public function get($uuid)
     {
-        return Conversation::find($id);
+        return Conversation::uuid($uuid);
     }
 
     /**

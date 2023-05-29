@@ -16,6 +16,7 @@
 namespace Dominservice\Conversations\Models\Eloquent;
 
 
+use Dominservice\Conversations\Traits\HasUuidPrimary;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -25,7 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Conversation  extends Model
 {
-    use SoftDeletes;
+    use HasUuidPrimary, SoftDeletes;
 
     const GROUP = 'group';
     const COUPLE = 'couple';
@@ -45,6 +46,10 @@ class Conversation  extends Model
         'type',
     ];
 
+    protected $dates = [
+        'cteated_at', 'updated_at'
+    ];
+
     private $unreadedMessagesCount;
 
     /**
@@ -55,6 +60,11 @@ class Conversation  extends Model
     public function getTable()
     {
         return config('conversations.tables.conversations');
+    }
+
+    protected function serializeDate($date)
+    {
+        return ($date != null) ?  $date->format('Y-m-d H:i:s') : null;
     }
 
     public function users() {
@@ -80,6 +90,11 @@ class Conversation  extends Model
     public function type()
     {
         return $this->hasOne(ConversationType::class, 'id', 'type_id');
+    }
+
+    public function owner()
+    {
+        return $this->hasOne(config('conversations.user_model'), 'uuid', 'owner_uuid');
     }
 
     function getNumOfUsers()

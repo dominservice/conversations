@@ -27,6 +27,10 @@ class ConversationMessage extends Model
     const TYPE_TEXT = 'text';
     const TYPE_ANCHOR = 'anchor';
     const TYPE_ATTACHMENT = 'attachment';
+
+    protected $dates = [
+        'cteated_at', 'updated_at'
+    ];
     /**
      * Get the table associated with the model.
      *
@@ -36,10 +40,16 @@ class ConversationMessage extends Model
     {
         return config('conversations.tables.conversation_messages');
     }
+
+    protected function serializeDate($date)
+    {
+        return ($date != null) ?  $date->format('Y-m-d H:i:s') : null;
+    }
+    
     public function sender() {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
 
-        return $this->hasOne($userModel, 'id', get_sender_key());
+        return $this->hasOne($userModel, (new $userModel)->getKeyType() === 'uuid' ? 'uuid' : 'id', get_sender_key());
     }
 
     public function status() {
