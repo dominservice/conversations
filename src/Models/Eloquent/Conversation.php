@@ -144,13 +144,18 @@ class Conversation  extends Model
         return self::COUPLE;
     }
 
-    public function hasUnreadedMessages()
+    public function getCountUnreadedMessages()
     {
         if ($this->unreadedMessagesCount === null) {
             $this->unreadedMessagesCount = conversation_unread_count_per_id($this->uuid);
         }
 
-        return $this->unreadedMessagesCount > 0;
+        return (int)$this->unreadedMessagesCount;
+    }
+
+    public function hasUnreadedMessages()
+    {
+        return $this->getCountUnreadedMessages() > 0;
     }
 
     public function getLastMessageDateHuman()

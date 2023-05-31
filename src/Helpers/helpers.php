@@ -65,7 +65,7 @@ if (!function_exists('conversation_user_exists')) {
      */
     function conversation_user_exists($convUuid, $userId = null)
     {
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
         return (new Dominservice\Conversations\Conversations)->existsUser($convUuid, $userId);
     }
 }
@@ -88,7 +88,7 @@ if (!function_exists('conversation_unread_count')) {
      */
     function conversation_unread_count($userId = null)
     {
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
         return (new Dominservice\Conversations\Conversations)->getUnreadCount($userId);
     }
 }
@@ -101,7 +101,7 @@ if (!function_exists('conversation_unread_count_per_id')) {
      */
     function conversation_unread_count_per_id($convUuid, $userId = null)
     {
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
         return (new Dominservice\Conversations\Conversations)->getConversationUnreadCount($convUuid, $userId);
     }
 }
@@ -114,7 +114,7 @@ if (!function_exists('conversation_delete')) {
     function conversation_delete($convUuid, $userId = null)
     {
         if (!empty($convUuid)) {
-            $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+            $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
             (new Dominservice\Conversations\Conversations)->delete($convUuid, $userId);
         }
     }
@@ -130,14 +130,14 @@ if (!function_exists('conversations')) {
     function conversations($userId = null, $relationType = null, $relationId = null, $withUsersList = true)
     {
         $users = collect([]);
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
         $conversations = (new Dominservice\Conversations\Conversations)->getConversations($userId, $relationType, $relationId);
         if ($withUsersList) {
             foreach ($conversations as $conv) {
                 if ($conv->users) {
                     foreach ($conv->users as $user) {
-                        if (empty($users[$user->id]) && $user->id !== \Auth::user()->id) {
-                            $users[$user->id] = $user;
+                        if (empty($users[$user->{\Auth::user()->getKeyName()}]) && $user->{\Auth::user()->getKeyName()} !== \Auth::user()->{\Auth::user()->getKeyName()}) {
+                            $users[$user->{\Auth::user()->getKeyName()}] = $user;
                         }
                     }
                 }
@@ -159,7 +159,7 @@ if (!function_exists('conversation_messages')) {
      */
     function conversation_messages($convUuid, $userId = null, $newToOld = true, $limit = null, $start = null)
     {
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
         return (new Dominservice\Conversations\Conversations)->getMessages($convUuid, $userId, $newToOld, $limit, $start);
     }
 }
@@ -173,7 +173,7 @@ if (!function_exists('conversation_messages_unread')) {
      */
     function conversation_messages_unread($convUuid, $userId = null, $newToOld = true, $limit = null, $start = null)
     {
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
         return (new Dominservice\Conversations\Conversations)->getUnreadMessages($convUuid, $userId, $newToOld, $limit, $start);
     }
 }
@@ -188,7 +188,7 @@ if (!function_exists('conversation_mark_as_archived')) {
      */
     function conversation_mark_as_archived($convUuid, $msgId, $userId = null)
     {
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
         (new Dominservice\Conversations\Conversations)->markAsArchived($convUuid, $msgId, $userId);
     }
 }
@@ -201,7 +201,7 @@ if (!function_exists('conversation_mark_as_deleted')) {
      */
     function conversation_mark_as_deleted($convUuid, $msgId, $userId = null)
     {
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
         (new Dominservice\Conversations\Conversations)->markAsDeleted($convUuid, $msgId, $userId);
     }
 }
@@ -214,7 +214,7 @@ if (!function_exists('conversation_mark_as_unread')) {
      */
     function conversation_mark_as_unread($convUuid, $msgId, $userId = null)
     {
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
         (new Dominservice\Conversations\Conversations)->markAsUnread($convUuid, $msgId, $userId);
     }
 }
@@ -227,7 +227,7 @@ if (!function_exists('conversation_mark_as_read')) {
      */
     function conversation_mark_as_read($convUuid, $msgId, $userId = null)
     {
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
         (new Dominservice\Conversations\Conversations)->markAsRead($convUuid, $msgId, $userId);
     }
 }
@@ -240,7 +240,7 @@ if (!function_exists('conversation_mark_as_read_all')) {
     function conversation_mark_as_read_all($convUuid, $userId = null)
     {
         if (!empty($convUuid)) {
-            $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+            $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
             (new Dominservice\Conversations\Conversations)->markReadAll($convUuid, $userId);
         }
     }
@@ -254,7 +254,7 @@ if (!function_exists('conversation_mark_as_unread_all')) {
     function conversation_mark_as_unread_all($convUuid, $userId = null)
     {
         if (!empty($convUuid)) {
-            $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+            $userId = !$userId && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userId;
             (new Dominservice\Conversations\Conversations)->markUnreadAll($convUuid, $userId);
         }
     }

@@ -86,8 +86,6 @@ class Conversations
         if (!empty($convUuid) && !empty($content) && $conversation = $this->get($convUuid)) {
             $conversation->save();
 
-            
-
             $userId = \Auth::user()->{\Auth::user()->getKeyName()};
 
             if (!$this->existsUser($convUuid, $userId)) {
@@ -214,9 +212,10 @@ class Conversations
      */
     public function getConversationUnreadCount($convUuid, $userId)
     {
-        return ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `msg`.`id`
-              FROM `{$this->messagesTable}` `msg`
-              WHERE `msg`.`conversation_uuid`='{$convUuid}')"))
+        return ConversationMessageStatus::whereHas('message', function ($q) use ($userId, $convUuid) {
+            $q->where(get_sender_key(), '!=', $userId);
+            $q->where('conversation_uuid', $convUuid);
+        })
             ->where(get_user_key(), $userId)
             ->where('status', self::UNREAD)
             ->count();
@@ -228,9 +227,12 @@ class Conversations
      */
     public function delete($convUuid, $userId)
     {
-        $messageStatuses = ConversationMessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
-              FROM `{$this->messagesTable}` `msg`
-              WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
+        $messageStatuses = ConversationMessageStatus::whereHas('message', function ($q) use ($convUuid) {
+            $q->where('conversation_uuid', $convUuid);
+        })
+//        ->whereIn('message_id', DB::Raw("SELECT `msg`.`id`
+//              FROM `{$this->messagesTable}` `msg`
+//              WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
             ->where(get_user_key(), $userId)
             ->get();
 
@@ -241,9 +243,12 @@ class Conversations
             }
         }
 
-        $noDeletedCount = ConversationMessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
-              FROM `{$this->messagesTable}` `msg`
-              WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
+        $noDeletedCount = ConversationMessageStatus::whereHas('message', function ($q) use ($convUuid) {
+            $q->where('conversation_uuid', $convUuid);
+        })
+//        ->whereIn('message_id', DB::Raw("SELECT `msg`.`id`
+//              FROM `{$this->messagesTable}` `msg`
+//              WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
             ->whereNotIn('status', [self::DELETED, self::ARCHIVED])
             ->count();
 
@@ -251,9 +256,12 @@ class Conversations
             $users = ConversationUser::where('conversations_id', $convUuid)->get();
             $messages = $con->messages;
             $relations = $con->relations;
-            $statuses = ConversationMessageStatus::whereIn('message_id', DB::Raw("SELECT `msg`.`id`
-                  FROM `{$this->messagesTable}` `msg`
-                  WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
+            $statuses = ConversationMessageStatus::whereHas('message', function ($q) use ($convUuid) {
+                $q->where('conversation_uuid', $convUuid);
+            })
+//            ->whereIn('message_id', DB::Raw("SELECT `msg`.`id`
+//                  FROM `{$this->messagesTable}` `msg`
+//                  WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
                 ->get();
             foreach ($users as $user) {
                 $user->delete();
@@ -392,14 +400,15 @@ class Conversations
      */
     public function markAs($convUuid, $msgId, $userId, $status): void
     {
-        $messageStatus = ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
-              FROM `{$this->messagesTable}`
-              WHERE `conversation_uuid`='{$convUuid}'
-              AND `message_id` = {$msgId}
-              AND `".get_sender_key()."`!='{$userId}')"))
-            ->where('status', self::UNREAD)
+        $messageStatus = ConversationMessageStatus::whereHas('message', function ($q) use ($userId, $convUuid) {
+            $q->where(get_sender_key(), '!=', $userId);
+            $q->where('conversation_uuid', $convUuid);
+        })
+            ->where('status', '!=', $status)
+            ->where('message_id', $msgId)
             ->where(get_user_key(), $userId)
             ->first();
+
         if (is_int($status)
             && $status >= 0
             && $status <= 3
@@ -456,10 +465,10 @@ class Conversations
      */
     public function markReadAll($convUuid, $userId)
     {
-        $messageStatuses = ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
-              FROM `{$this->messagesTable}`
-              WHERE `conversation_uuid`='{$convUuid}'
-              AND `".get_sender_key()."`!='{$userId}')"))
+        $messageStatuses = ConversationMessageStatus::whereHas('message', function ($q) use ($userId, $convUuid) {
+            $q->where(get_sender_key(), '!=', $userId);
+            $q->where('conversation_uuid', $convUuid);
+        })
             ->where('status', self::UNREAD)
             ->where(get_user_key(), $userId)
             ->get();
@@ -478,11 +487,10 @@ class Conversations
      */
     public function markUnreadAll($convUuid, $userId)
     {
-        $messagesT = DB::getTablePrefix() . (new ConversationMessage())->getTable();
-        $messageStatuses = ConversationMessageStatus::whereRaw(DB::Raw("message_id IN (SELECT `id`
-              FROM `{$messagesT}`
-              WHERE `conversation_uuid`='{$convUuid}'
-              AND `".get_sender_key()."`!='{$userId}')"))
+        $messageStatuses = ConversationMessageStatus::whereHas('message', function ($q) use ($userId, $convUuid) {
+            $q->where(get_sender_key(), '!=', $userId);
+            $q->where('conversation_uuid', '!=', $convUuid);
+        })
             ->where('status', self::READ)
             ->where(get_user_key(), $userId)
             ->get();

@@ -34,4 +34,8 @@ class ConversationMessageStatus extends Model
     {
         return config('conversations.tables.conversation_message_statuses');
     }
+
+    public function message() {
+        return $this->hasOne(ConversationMessage::class, 'id', 'message_id');
+    }
 } 
