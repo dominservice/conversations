@@ -58,18 +58,19 @@ class Conversations
 
         if (count((array)$users) > 1) {
             $conversation = new Conversation();
+            $conversation->owner_uuid = \Auth::user()->{\Auth::user()->getKeyName()};
             $conversation->save();
             $this->setRelations($conversation, $relationType, $relationId);
             $this->setUsers($conversation, $users);
 
             if (!empty($content)) {
-                $this->addMessage($conversation->id, $content);
+                $this->addMessage($conversation->uuid, $content);
             }
             if ($getObject) {
                 return $conversation;
             }
 
-            return $conversation->id;
+            return $conversation->uuid;
         }
         return false;
     }
@@ -230,9 +231,6 @@ class Conversations
         $messageStatuses = ConversationMessageStatus::whereHas('message', function ($q) use ($convUuid) {
             $q->where('conversation_uuid', $convUuid);
         })
-//        ->whereIn('message_id', DB::Raw("SELECT `msg`.`id`
-//              FROM `{$this->messagesTable}` `msg`
-//              WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
             ->where(get_user_key(), $userId)
             ->get();
 
@@ -246,9 +244,6 @@ class Conversations
         $noDeletedCount = ConversationMessageStatus::whereHas('message', function ($q) use ($convUuid) {
             $q->where('conversation_uuid', $convUuid);
         })
-//        ->whereIn('message_id', DB::Raw("SELECT `msg`.`id`
-//              FROM `{$this->messagesTable}` `msg`
-//              WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
             ->whereNotIn('status', [self::DELETED, self::ARCHIVED])
             ->count();
 
@@ -259,9 +254,6 @@ class Conversations
             $statuses = ConversationMessageStatus::whereHas('message', function ($q) use ($convUuid) {
                 $q->where('conversation_uuid', $convUuid);
             })
-//            ->whereIn('message_id', DB::Raw("SELECT `msg`.`id`
-//                  FROM `{$this->messagesTable}` `msg`
-//                  WHERE `msg`.`conversation_uuid`='{$convUuid}'"))
                 ->get();
             foreach ($users as $user) {
                 $user->delete();
@@ -556,13 +548,13 @@ class Conversations
                         $this->setRelations($conversation, $type, $id);
                     }                }
             } elseif (!is_null($relationId)
-                && !$exists = ConversationRelation::where('conversation_uuid', $conversation->id)
+                && !$exists = ConversationRelation::where('conversation_uuid', $conversation->uuid)
                     ->where('parent_type', $relationType)
                     ->where('parent_id', $relationId)
                     ->first()
             ) {
                 $relation = new ConversationRelation();
-                $relation->conversation_uuid = $conversation->id;
+                $relation->conversation_uuid = $conversation->uuid;
                 $relation->parent_type = $relationType;
                 $relation->parent_id = $relationId;
 
@@ -585,11 +577,11 @@ class Conversations
             foreach ($userId as $id) {
                 $this->setUsers($conversation, $id);
             }
-        } elseif (!$exists = ConversationUser::where('conversation_uuid', $conversation->id)
+        } elseif (!$exists = ConversationUser::where('conversation_uuid', $conversation->uuid)
             ->where(get_user_key(), $userId)->first()
         ) {
             $conversationUser = new ConversationUser();
-            $conversationUser->conversation_uuid = $conversation->id;
+            $conversationUser->conversation_uuid = $conversation->uuid;
             $conversationUser->{get_user_key()} = $userId;
             $conversationUser->save();
             $users[] = $conversationUser;
@@ -606,8 +598,8 @@ class Conversations
         if (!is_array($users)) {
             $users = [$users];
         }
-        if (!in_array(auth()->user()->id, $users)) {
-            $users[] = auth()->user()->id;
+        if (!in_array(auth()->user()->{auth()->user()->getKeyName()}, $users)) {
+            $users[] = auth()->user()->{auth()->user()->getKeyName()};
         }
 
         return $users;

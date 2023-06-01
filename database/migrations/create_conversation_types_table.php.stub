@@ -35,6 +35,12 @@ return new class extends Migration {
                 $table->timestamps();
                 $table->softDeletes();
             });
+
+            \DB::table(config('conversations.tables.conversation_types'))->insert([
+                ['name' => 'single','custom' => 0, 'created_at' => now(), 'updated_at' => now()],
+                ['name' => 'group','custom' => 0, 'created_at' => now(), 'updated_at' => now()],
+                ['name' => 'support','custom' => 0, 'created_at' => now(), 'updated_at' => now()],
+            ]);
         }
     }
 

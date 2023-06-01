@@ -77,6 +77,12 @@ class Conversation  extends Model
         );
     }
 
+    public function participants() {
+        $userUuid = \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : '';
+
+        return $this->users()->where(get_user_key(), '!=', $userUuid);
+    }
+
     public function messages()
     {
         return $this->hasMany(ConversationMessage::class, 'conversation_uuid', 'uuid');
@@ -90,6 +96,12 @@ class Conversation  extends Model
     public function type()
     {
         return $this->hasOne(ConversationType::class, 'id', 'type_id');
+    }
+
+
+    public function lastMessage()
+    {
+        return $this->hasOne(ConversationMessage::class, 'conversation_uuid', 'uuid');
     }
 
     public function owner()
@@ -107,19 +119,12 @@ class Conversation  extends Model
         return $this->messages->count() ?? 0;
     }
 
-    function getTheOtherUser($userId = null)
+    function getTheOtherUser($userUuid = null)
     {
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        $userUuid = !$userUuid && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userUuid;
 
-        if($users = !empty($this->users) ? clone $this->users : null) {
-            foreach ($users as $id=>$user) {
-                if ((int)$user->id === (int)$userId) {
-                    $users->forget($id);
-                }
-            }
-        }
+        return $this->users()->where(get_user_key(), '!=', $userUuid)->get();
 
-        return $users;
     }
 
     function getFirstMessage()
@@ -163,5 +168,13 @@ class Conversation  extends Model
         $lastMessage = $this->messages()->orderByDesc('created_at')->first();
 
         return now()->diffForHumans($lastMessage->created_at, true);
+    }
+    
+    public function setType($typeName)
+    {
+        if ($type = ConversationType::where('name', $typeName)->first()) {
+            $this->type_id = $type->id;
+            $this->save();
+        }
     }
 }
