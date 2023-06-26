@@ -57,6 +57,12 @@ return new class extends Migration {
                 $table->string('type')->after('content')->default('text');
             });
         }
+
+        if (Schema::hasTable(config('conversations.tables.conversation_users'))) {
+            Schema::table(config('conversations.tables.conversation_users'), function (Blueprint $table) {
+                $table->boolean('is_conversation_deleted')->default(0);
+            });
+        }
     }
 
     /**
