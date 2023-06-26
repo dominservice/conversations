@@ -248,25 +248,10 @@ class Conversations
             ->count();
 
         if ($noDeletedCount === 0 && $con = Conversation::uuid($convUuid)) {
-            $users = ConversationUser::where('conversation_uuid', $convUuid)->get();
-            $messages = $con->messages;
-            $relations = $con->relations;
-            $statuses = ConversationMessageStatus::whereHas('message', function ($q) use ($convUuid) {
-                $q->where('conversation_uuid', $convUuid);
-            })
-                ->get();
-            foreach ($users as $user) {
-                $user->delete();
-            }
-            foreach ($messages as $message) {
-                $message->delete();
-            }
-            foreach ($relations as $relation) {
-                $relation->delete();
-            }
-            foreach ($statuses as $status) {
-                $status->delete();
-            }
+            $con->messages()->delete();
+            $con->relations()->delete();
+            ConversationUser::where('conversation_uuid', $convUuid)->delete();
+            $con->delete();
         }
     }
 
