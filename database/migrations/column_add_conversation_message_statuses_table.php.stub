@@ -26,16 +26,20 @@ return new class extends Migration {
      */
     public function up()
     {
-        if (Schema::hasTable(config('conversations.tables.conversation_message_statuses'))) {
-            Schema::table(config('conversations.tables.conversation_message_statuses'), function (Blueprint $table) {
-                $table->timestamp('notified_at')->after('status')->nullable();
-            });
-        }
-        if (Schema::hasTable(config('conversations.tables.conversations'))) {
-            Schema::table(config('conversations.tables.conversations'), function (Blueprint $table) {
-                $table->boolean('read_only')->after('type_id')->default(0)();
-            });
-        }
+         if (Schema::hasTable(config('conversations.tables.conversation_message_statuses'))
+                   && !Schema::hasColumn(config('conversations.tables.conversation_message_statuses'), 'notified_at')
+               ) {
+                   Schema::table(config('conversations.tables.conversation_message_statuses'), function (Blueprint $table) {
+                       $table->timestamp('notified_at')->after('status')->nullable();
+                   });
+               }
+               if (Schema::hasTable(config('conversations.tables.conversations'))
+                   && !Schema::hasColumn(config('conversations.tables.conversations'), 'read_only')
+               ) {
+                   Schema::table(config('conversations.tables.conversations'), function (Blueprint $table) {
+                       $table->boolean('read_only')->after('type_id')->default(0);
+                   });
+               }
     }
 
     /**

@@ -248,7 +248,7 @@ class Conversations
             ->count();
 
         if ($noDeletedCount === 0 && $con = Conversation::uuid($convUuid)) {
-            $users = ConversationUser::where('conversations_id', $convUuid)->get();
+            $users = ConversationUser::where('conversation_uuid', $convUuid)->get();
             $messages = $con->messages;
             $relations = $con->relations;
             $statuses = ConversationMessageStatus::whereHas('message', function ($q) use ($convUuid) {
