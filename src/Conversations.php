@@ -172,10 +172,11 @@ class Conversations
         }
         $results->whereIn(get_user_key(), $users)
             ->groupBy('conversation_uuid')
-            ->havingRaw("COUNT(conversation_uuid)=2");
+            ->havingRaw("COUNT(DISTINCT conversation_uuid)=" . 1)
+            ->havingRaw("COUNT(DISTINCT user_uuid)=" . count($users));
 
         if ($results = $results->first()) {
-            return (int)$results->conversation_uuid;
+            return $results->conversation_uuid;
         }
 
         return false;
