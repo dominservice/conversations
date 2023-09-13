@@ -21,6 +21,7 @@ use Dominservice\Conversations\Models\Eloquent\ConversationRelation;
 use Dominservice\Conversations\Models\Eloquent\ConversationUser;
 use Dominservice\Conversations\Models\Eloquent\ConversationMessage;
 use Dominservice\Conversations\Models\Eloquent\ConversationMessageStatus;
+use function PHPUnit\Framework\isInstanceOf;
 
 /**
  * Class Conversations
@@ -84,12 +85,17 @@ class Conversations
      */
     public function addMessage($convUuid, $content, $addUser = false, $getObject = false)
     {
-        if (!empty($convUuid) && !empty($content) && $conversation = $this->get($convUuid)) {
+        if (!empty($convUuid)
+            && !empty($content)
+            && (($convUuid instanceof Conversation && $conversation = $convUuid)
+                || (is_string($convUuid) && $conversation = $this->get($convUuid)))
+        ) {
+//        if (!empty($convUuid) && !empty($content) && $conversation = $this->get($convUuid)) {
             $conversation->save();
 
             $userId = \Auth::user()->{\Auth::user()->getKeyName()};
 
-            if (!$this->existsUser($convUuid, $userId)) {
+            if (!$this->existsUser($conversation->uuid, $userId)) {
                 if ($addUser) {
                     $this->setUsers($conversation, $userId);
                 } else {
@@ -99,27 +105,38 @@ class Conversations
 
             $message = new ConversationMessage();
             $message->{get_sender_key()} = $userId;
-            $message->conversation_uuid = $convUuid;
+            $message->conversation_uuid = $conversation->uuid;
             $message->content = $content;
             $message->save();
 
             //get all users in conversation
-            $usersInConv = $conversation->users()->get() ?? [];
+//            $usersInConv = $conversation->users()->get() ?? [];
+            $usersInConv = $conversation->users ?? [];
 
             //and add msg status for each user in conversation
+            $dataMessageStatuses = [];
+
             foreach ($usersInConv as $userInConv) {
-                $messageStatus = new ConversationMessageStatus();
-                $messageStatus->{get_user_key()} = $userInConv->{\Auth::user()->getKeyName()};
-                $messageStatus->message_id = $message->id;
-                if ($userInConv->id == $userId) { //its the sender user
-                    $messageStatus->self = 1;
-                    $messageStatus->status = self::READ;
-                } else { //other users in conv
-                    $messageStatus->self = 0;
-                    $messageStatus->status = self::UNREAD;
-                }
-                $messageStatus->save();
+                $dataMessageStatuses[] = [
+                    get_user_key() => $userInConv->{\Auth::user()->getKeyName()},
+                    'message_id' => $message->id,
+                    'self' => $userInConv->id == $userId ? 1 : 0,
+                    'status' => $userInConv->id == $userId ? self::READ : self::UNREAD,
+                ];
+//                $messageStatus = new ConversationMessageStatus();
+//                $messageStatus->{get_user_key()} = $userInConv->{\Auth::user()->getKeyName()};
+//                $messageStatus->message_id = $message->id;
+//                if ($userInConv->id == $userId) { //its the sender user
+//                    $messageStatus->self = 1;
+//                    $messageStatus->status = self::READ;
+//                } else { //other users in conv
+//                    $messageStatus->self = 0;
+//                    $messageStatus->status = self::UNREAD;
+//                }
+//                $messageStatus->save();
             }
+
+            \DB::table((new ConversationMessageStatus)->getTable())->insert($dataMessageStatuses);
 
             if ($getObject) {
                 return $message;
@@ -159,23 +176,28 @@ class Conversations
      */
     public function getIdBetweenUsers(array $users, $relationType = null, $relationId = null)
     {
-        $results = ConversationUser::select('conversation_uuid');
+        $query = ConversationUser::select('conversation_uuid');
+        $uT = DB::getTablePrefix().(new ConversationUser)->getTable();
+        $cT = DB::getTablePrefix().(new Conversation)->getTable();
+
         if (!empty($relationType) && !empty($relationId)) {
-            $uT = DB::getTablePrefix().(new ConversationUser)->getTable();
-            $cT = DB::getTablePrefix().(new Conversation)->getTable();
-            $results->whereRaw(DB::Raw("(SELECT COUNT(`parent_id`)
+            $query->whereRaw(DB::Raw("(SELECT COUNT(`parent_id`)
                     FROM `{$cT}`
                     WHERE `{$cT}`.`conversation_uuid`=`{$uT}`.`conversation_uuid`
                      AND `{$cT}`.`parent_id`='{$relationId}'
                      AND `{$cT}`.`parent_type`='{$relationType}'
                 ) > 0"));
         }
-        $results->whereIn(get_user_key(), $users)
+
+        $query->whereIn(get_user_key(), $users)
+            ->havingRaw("(SELECT COUNT(`user_uuid`) FROM `{$uT}` u
+                WHERE u.`conversation_uuid` = `{$uT}`.`conversation_uuid`) = " . count($users))
             ->groupBy('conversation_uuid')
             ->havingRaw("COUNT(DISTINCT conversation_uuid)=" . 1)
-            ->havingRaw("COUNT(DISTINCT user_uuid)=" . count($users));
-
-        if ($results = $results->first()) {
+            ->havingRaw("COUNT(DISTINCT user_uuid)=" . count($users))
+        ;
+//dd(sql_with_bindings($query));
+        if ($results = $query->first()) {
             return $results->conversation_uuid;
         }
 
