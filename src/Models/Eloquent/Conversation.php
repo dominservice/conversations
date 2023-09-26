@@ -43,14 +43,14 @@ class Conversation  extends Model
      */
     protected $fillable = [
         'title',
-        'type',
+        'type_id',
     ];
 
     protected $dates = [
         'cteated_at', 'updated_at'
     ];
 
-    private $unreadedMessagesCount;
+//    private $unreadedMessagesCount;
 
     /**
      * Get the table associated with the model.
@@ -62,18 +62,21 @@ class Conversation  extends Model
         return config('conversations.tables.conversations');
     }
 
-    protected function serializeDate($date)
-    {
-        return ($date != null) ?  $date->format('Y-m-d H:i:s') : null;
-    }
+//    protected function serializeDate($date)
+//    {
+//        return ($date != null) ?  $date->format('Y-m-d H:i:s') : null;
+//    }
 
     public function users() {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
-
-        return $this->belongsToMany($userModel,
+        
+        return $this->belongsToMany(
+            $userModel,
             'conversation_users',
             'conversation_uuid',
-            get_user_key()
+            get_user_key(),
+            'uuid',
+            'uuid'
         );
     }
 
@@ -169,7 +172,7 @@ class Conversation  extends Model
 
         return now()->diffForHumans($lastMessage->created_at, true);
     }
-    
+
     public function setType($typeName)
     {
         if ($type = ConversationType::where('name', $typeName)->first()) {

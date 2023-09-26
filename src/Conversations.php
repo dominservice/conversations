@@ -110,30 +110,20 @@ class Conversations
             $message->save();
 
             //get all users in conversation
-//            $usersInConv = $conversation->users()->get() ?? [];
             $usersInConv = $conversation->users ?? [];
 
             //and add msg status for each user in conversation
             $dataMessageStatuses = [];
 
             foreach ($usersInConv as $userInConv) {
-                $dataMessageStatuses[] = [
-                    get_user_key() => $userInConv->{\Auth::user()->getKeyName()},
-                    'message_id' => $message->id,
-                    'self' => $userInConv->id == $userId ? 1 : 0,
-                    'status' => $userInConv->id == $userId ? self::READ : self::UNREAD,
-                ];
-//                $messageStatus = new ConversationMessageStatus();
-//                $messageStatus->{get_user_key()} = $userInConv->{\Auth::user()->getKeyName()};
-//                $messageStatus->message_id = $message->id;
-//                if ($userInConv->id == $userId) { //its the sender user
-//                    $messageStatus->self = 1;
-//                    $messageStatus->status = self::READ;
-//                } else { //other users in conv
-//                    $messageStatus->self = 0;
-//                    $messageStatus->status = self::UNREAD;
-//                }
-//                $messageStatus->save();
+                if (!empty($userInConv->{\Auth::user()->getKeyName()})) {
+                    $dataMessageStatuses[] = [
+                        get_user_key() => $userInConv->{\Auth::user()->getKeyName()},
+                        'message_id' => $message->id,
+                        'self' => $userInConv->id == $userId ? 1 : 0,
+                        'status' => $userInConv->id == $userId ? self::READ : self::UNREAD,
+                    ];
+                }
             }
 
             \DB::table((new ConversationMessageStatus)->getTable())->insert($dataMessageStatuses);
@@ -547,7 +537,7 @@ class Conversations
      */
     private function setRelations($conversation, $relationType = null, $relationId = null)
     {
-        $relations = $conversation->relations ?? collect();
+        $relations = /*$conversation->relations ??*/ collect();
 
         if (!is_null($relationType)) {
             if (is_array($relationType)) {
@@ -570,7 +560,7 @@ class Conversations
                 $relations[] = $relation;
             }
         }
-        $conversation->relations->push($relations);
+//        $conversation->relations->push($relations);
     }
 
     /**
@@ -579,7 +569,7 @@ class Conversations
      */
     private function setUsers(&$conversation, $userId)
     {
-        $users = $conversation->users ?? collect();
+        $users = /*$conversation->users ?? */collect();
 
         if (is_array($userId)) {
             foreach ($userId as $id) {
@@ -592,9 +582,9 @@ class Conversations
             $conversationUser->conversation_uuid = $conversation->uuid;
             $conversationUser->{get_user_key()} = $userId;
             $conversationUser->save();
-            $users[] = $conversationUser;
+//            $users->push($conversationUser);
         }
-        $conversation->users->push($users);
+//        $conversation->users->push($users);
     }
 
     /**
