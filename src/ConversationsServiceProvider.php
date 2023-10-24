@@ -83,7 +83,7 @@ class ConversationsServiceProvider extends ServiceProvider
     protected function getMigrationFileName(Filesystem $filesystem, $name): string
     {
         $this->lpMigration++;
-        $timestamp = date('Y_m_d_Hi'.str_pad($this->lpMigration, 10, "0", STR_PAD_RIGHT));
+        $timestamp = date('Y_m_d_Hi'.str_pad($this->lpMigration, 2, "0", STR_PAD_LEFT));
 
         return Collection::make($this->app->databasePath().DIRECTORY_SEPARATOR.'migrations'.DIRECTORY_SEPARATOR)
             ->flatMap(function ($path) use ($filesystem, $name) {
