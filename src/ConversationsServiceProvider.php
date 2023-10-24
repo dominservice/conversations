@@ -34,6 +34,8 @@ class ConversationsServiceProvider extends ServiceProvider
 	 */
 	protected $defer = false;
 
+    private  $lpMigration = 0;
+
     public function boot(Filesystem $filesystem) {
         $this->publishes([
             __DIR__ . '/../config/conversations.php' => config_path('conversations.php'),
@@ -41,26 +43,11 @@ class ConversationsServiceProvider extends ServiceProvider
 
         $this->publishes([
             __DIR__.'/../database/migrations/create_conversations_tables.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversations_tables'),
-           ], 'migrations');
-
-        sleep(1);
-        $this->publishes([
             __DIR__.'/../database/migrations/create_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversation_relations_table'),
-        ], 'migrations');
-
-        sleep(1);
-        $this->publishes([
             __DIR__.'/../database/migrations/create_conversation_types_table.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversation_types_table'),
-        ], 'migrations');
-
-        sleep(1);
-        $this->publishes([
             __DIR__.'/../database/migrations/column_add_conversation_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_table'),
-        ], 'migrations');
-
-        sleep(1);
-        $this->publishes([
             __DIR__.'/../database/migrations/column_add_conversation_message_statuses_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_message_statuses_table'),
+            __DIR__.'/../database/migrations/column_add_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_relations_table'),
         ], 'migrations');
     }
 
@@ -95,7 +82,8 @@ class ConversationsServiceProvider extends ServiceProvider
      */
     protected function getMigrationFileName(Filesystem $filesystem, $name): string
     {
-        $timestamp = date('Y_m_d_His');
+        $this->lpMigration++;
+        $timestamp = date('Y_m_d_Hi'.str_pad($this->lpMigration, 10, "0", STR_PAD_RIGHT));
 
         return Collection::make($this->app->databasePath().DIRECTORY_SEPARATOR.'migrations'.DIRECTORY_SEPARATOR)
             ->flatMap(function ($path) use ($filesystem, $name) {
