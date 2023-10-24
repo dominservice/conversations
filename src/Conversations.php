@@ -21,7 +21,7 @@ use Dominservice\Conversations\Models\Eloquent\ConversationRelation;
 use Dominservice\Conversations\Models\Eloquent\ConversationUser;
 use Dominservice\Conversations\Models\Eloquent\ConversationMessage;
 use Dominservice\Conversations\Models\Eloquent\ConversationMessageStatus;
-use function PHPUnit\Framework\isInstanceOf;
+use Illuminate\Support\Str;
 
 /**
  * Class Conversations
@@ -553,8 +553,17 @@ class Conversations
             ) {
                 $relation = new ConversationRelation();
                 $relation->conversation_uuid = $conversation->uuid;
-                $relation->parent_type = $relationType;
-                $relation->parent_id = $relationId;
+
+                if (Str::isUlid($relationId)) {
+                    $relation->ulid_parent_type = $relationType;
+                    $relation->ulid_parent_id = $relationId;
+                } elseif(Str::isUuid($relationId)) {
+                    $relation->uuid_parent_type = $relationType;
+                    $relation->uuid_parent_id = $relationId;
+                } else {
+                    $relation->parent_type = $relationType;
+                    $relation->parent_id = $relationId;
+                }
 
                 $relation->save();
                 $relations[] = $relation;
