@@ -6,14 +6,17 @@ trait ParentMorph
 {
     public function scopeWhereParent($query, $parent)
     {
-        $alias = $parent->getMorphClass();
-//        $class = str_replace('\\', '\\\\', get_class($parent));
-        return $query->whereParentType($alias)->whereParentId($parent->{$parent->getKeyName()});
+        return $query->whereParentType($parent->getMorphClass())
+            ->whereParentId($parent->{$parent->getKeyName()});
+    }
+    public function scopeWhereUlidParent($query, $parent)
+    {
+        return $query->whereUlidParentType($parent->getMorphClass())
+            ->whereUlidParentId($parent->{$parent->getKeyName()});
     }
     public function scopeWhereUuidParent($query, $parent)
     {
-        $alias = $parent->getMorphClass();
-//        $class = str_replace('\\', '\\\\', get_class($parent));
-        return $query->whereUuidParentType($alias)->whereUuidParentId($parent->{$parent->getKeyName()});
+        return $query->whereUuidParentType($parent->getMorphClass())
+            ->whereUuidParentId($parent->{$parent->getKeyName()});
     }
 }

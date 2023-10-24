@@ -54,4 +54,12 @@ class ConversationRelation  extends Model
     {
         return $this->morphTo('uuid_parent');
     }
+
+    /**
+     * Get the owning commentable model.
+     */
+    public function ulidParent()
+    {
+        return $this->morphTo('ulid_parent');
+    }
 } 
