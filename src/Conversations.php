@@ -171,11 +171,20 @@ class Conversations
         $cT = DB::getTablePrefix().(new Conversation)->getTable();
 
         if (!empty($relationType) && !empty($relationId)) {
-            $query->whereRaw(DB::Raw("(SELECT COUNT(`parent_id`)
-                    FROM `{$cT}`
-                    WHERE `{$cT}`.`conversation_uuid`=`{$uT}`.`conversation_uuid`
-                     AND `{$cT}`.`parent_id`='{$relationId}'
-                     AND `{$cT}`.`parent_type`='{$relationType}'
+            $rT = DB::getTablePrefix().(new ConversationRelation)->getTable();
+            $parentCol = 'parent';
+
+            if (Str::isUlid($relationId)) {
+                $parentCol = 'ulid_parent';
+            } elseif(Str::isUuid($relationId)) {
+                $parentCol = 'uuid_parent';
+            }
+
+            $query->whereRaw(DB::Raw("(SELECT COUNT(`{$parentCol}_id`)
+                    FROM `{$rT}`
+                    WHERE `{$rT}`.`conversation_uuid`=`{$uT}`.`conversation_uuid`
+                     AND `{$rT}`.`{$parentCol}_id`='{$relationId}'
+                     AND `{$rT}`.`{$parentCol}_type`='{$relationType}'
                 ) > 0"));
         }
 
