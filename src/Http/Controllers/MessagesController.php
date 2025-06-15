@@ -322,4 +322,82 @@ class MessagesController extends Controller
             'message' => trans('conversations::conversations.message.typing_sent'),
         ]);
     }
+
+    /**
+     * Get all users who have read a specific message.
+     *
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @return \Illuminate\Http\Response
+     */
+    public function readBy($uuid, $messageId)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        // Check if the message belongs to the conversation
+        $message = \Dominservice\Conversations\Models\Eloquent\ConversationMessage::where('id', $messageId)
+            ->where('conversation_uuid', $uuid)
+            ->first();
+
+        if (!$message) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.not_found'),
+            ], 404);
+        }
+
+        $readBy = app('conversations')->getMessageReadBy($messageId);
+
+        return response()->json([
+            'data' => [
+                'message_id' => $messageId,
+                'read_by' => $readBy,
+                'read_count' => $readBy->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Get all messages in a conversation with their read status for all users.
+     *
+     * @param  string  $uuid
+     * @return \Illuminate\Http\Response
+     */
+    public function conversationReadBy($uuid)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        $messages = app('conversations')->getConversationReadBy($uuid);
+
+        return response()->json([
+            'data' => $messages,
+        ]);
+    }
 }

@@ -257,4 +257,131 @@ class ApiTest extends TestCase
         // Verify the attachment type is 'image'
         $this->assertEquals('image', $attachmentsResponse->json('data.0.type'));
     }
+
+    public function testGetMessageReadBy()
+    {
+        // Create a conversation with a third user
+        $thirdUser = User::create([
+            'name' => 'Third User',
+            'email' => 'third@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->post('/api/conversations', [
+                'users' => [$this->otherUser->id, $thirdUser->id],
+                'content' => 'Hello, this is a test message',
+            ]);
+
+        $conversationUuid = $response->json('data.uuid');
+
+        // Get the message ID
+        $messagesResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/messages");
+
+        $messageId = $messagesResponse->json('data.0.message_id');
+
+        // Mark the message as read by other users
+        $this->actingAs($this->otherUser)
+            ->post("/api/conversations/{$conversationUuid}/messages/{$messageId}/read");
+
+        $this->actingAs($thirdUser)
+            ->post("/api/conversations/{$conversationUuid}/messages/{$messageId}/read");
+
+        // Get the read by information
+        $readByResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/messages/{$messageId}/read-by");
+
+        $readByResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    'message_id',
+                    'read_by',
+                    'read_count'
+                ]
+            ]);
+
+        // Verify that both users are in the read by list
+        $this->assertEquals(2, $readByResponse->json('data.read_count'));
+        $this->assertCount(2, $readByResponse->json('data.read_by'));
+    }
+
+    public function testGetConversationReadBy()
+    {
+        // Create a conversation with a third user
+        $thirdUser = User::create([
+            'name' => 'Third User',
+            'email' => 'third@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->post('/api/conversations', [
+                'users' => [$this->otherUser->id, $thirdUser->id],
+                'content' => 'First message',
+            ]);
+
+        $conversationUuid = $response->json('data.uuid');
+
+        // Add a second message
+        $this->actingAs($this->user)
+            ->post("/api/conversations/{$conversationUuid}/messages", [
+                'content' => 'Second message',
+            ]);
+
+        // Get the message IDs
+        $messagesResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/messages");
+
+        $messageId1 = $messagesResponse->json('data.0.message_id');
+        $messageId2 = $messagesResponse->json('data.1.message_id');
+
+        // Mark the first message as read by both users
+        $this->actingAs($this->otherUser)
+            ->post("/api/conversations/{$conversationUuid}/messages/{$messageId1}/read");
+
+        $this->actingAs($thirdUser)
+            ->post("/api/conversations/{$conversationUuid}/messages/{$messageId1}/read");
+
+        // Mark the second message as read by only the second user
+        $this->actingAs($this->otherUser)
+            ->post("/api/conversations/{$conversationUuid}/messages/{$messageId2}/read");
+
+        // Get the conversation read by information
+        $readByResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/read-by");
+
+        $readByResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => [
+                        'id',
+                        'content',
+                        'sender_id',
+                        'created_at',
+                        'read_by',
+                        'read_count'
+                    ]
+                ]
+            ]);
+
+        // Find the messages in the response
+        $messages = $readByResponse->json('data');
+        $message1 = null;
+        $message2 = null;
+
+        foreach ($messages as $message) {
+            if ($message['id'] == $messageId1) {
+                $message1 = $message;
+            } elseif ($message['id'] == $messageId2) {
+                $message2 = $message;
+            }
+        }
+
+        // Verify the read counts
+        $this->assertNotNull($message1);
+        $this->assertNotNull($message2);
+        $this->assertEquals(2, $message1['read_count']); // Both users read the first message
+        $this->assertEquals(1, $message2['read_count']); // Only one user read the second message
+    }
 }

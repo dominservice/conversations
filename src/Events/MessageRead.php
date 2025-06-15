@@ -79,11 +79,25 @@ class MessageRead implements ShouldBroadcast
      */
     public function broadcastWith()
     {
+        // Get the user who read the message
+        $userModel = config('conversations.user_model');
+        $user = $userModel::find($this->userId);
+
+        // Get all users who have read this message
+        $readBy = app('conversations')->getMessageReadBy($this->messageId);
+
         return [
             'message_id' => $this->messageId,
             'conversation_uuid' => $this->conversationUuid,
             'user_id' => $this->userId,
+            'user' => $user ? [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ] : null,
             'read_at' => now()->toIso8601String(),
+            'read_by' => $readBy,
+            'read_count' => $readBy->count(),
         ];
     }
 }

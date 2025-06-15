@@ -25,6 +25,10 @@ Route::group(['prefix' => $prefix, 'middleware' => $middleware], function () {
     // Attachments routes
     Route::get('/{uuid}/messages/{messageId}/attachments', [MessagesController::class, 'attachments']);
 
+    // Read receipts routes
+    Route::get('/{uuid}/messages/{messageId}/read-by', [MessagesController::class, 'readBy']);
+    Route::get('/{uuid}/read-by', [MessagesController::class, 'conversationReadBy']);
+
     // Typing indicator
     Route::post('/{uuid}/typing', [MessagesController::class, 'typing']);
 });

@@ -818,4 +818,62 @@ class Conversations
             $this->broadcastManager->broadcast(new UserTyping($conversationUuid, $userId, $userName));
         }
     }
+
+    /**
+     * Get all users who have read a specific message.
+     *
+     * @param  int  $messageId
+     * @return \Illuminate\Support\Collection
+     */
+    public function getMessageReadBy(int $messageId)
+    {
+        $userModel = config('conversations.user_model');
+        $userKey = get_user_key();
+
+        $readStatuses = ConversationMessageStatus::where('message_id', $messageId)
+            ->where('status', self::READ)
+            ->where('self', 0) // Exclude the sender
+            ->with(['user' => function($query) {
+                $query->select('id', 'name', 'email'); // Add any other user fields you want to include
+            }])
+            ->get();
+
+        return $readStatuses->map(function($status) {
+            return $status->user;
+        })->filter(); // Remove any null values
+    }
+
+    /**
+     * Get all messages in a conversation with their read status for all users.
+     *
+     * @param  string  $conversationUuid
+     * @return \Illuminate\Support\Collection
+     */
+    public function getConversationReadBy(string $conversationUuid)
+    {
+        $messages = ConversationMessage::where('conversation_uuid', $conversationUuid)
+            ->with(['status' => function($query) {
+                $query->where('status', self::READ)
+                    ->where('self', 0) // Exclude the sender
+                    ->with(['user' => function($query) {
+                        $query->select('id', 'name', 'email'); // Add any other user fields you want to include
+                    }]);
+            }])
+            ->get();
+
+        return $messages->map(function($message) {
+            $readBy = $message->status->map(function($status) {
+                return $status->user;
+            })->filter(); // Remove any null values
+
+            return [
+                'id' => $message->id,
+                'content' => $message->content,
+                'sender_id' => $message->{get_sender_key()},
+                'created_at' => $message->created_at,
+                'read_by' => $readBy,
+                'read_count' => $readBy->count(),
+            ];
+        });
+    }
 }

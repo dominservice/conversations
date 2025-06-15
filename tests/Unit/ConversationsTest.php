@@ -166,4 +166,89 @@ class ConversationsTest extends TestCase
             'status' => Conversations::READ
         ]);
     }
+
+    /** @test */
+    public function it_can_get_users_who_read_a_message()
+    {
+        // Mock Auth user for this specific test
+        Auth::shouldReceive('user')->andReturn($this->user1);
+
+        // Create a third user
+        $user3 = $this->createMockUser(3);
+
+        // Create a conversation with all three users
+        $users = [$this->user1->id, $this->user2->id, $user3->id];
+        $conversationId = $this->conversations->create($users);
+
+        // User 1 sends a message
+        $content = 'Test message from User 1';
+        $messageId = $this->conversations->addMessage($conversationId, $content);
+
+        // User 2 reads the message
+        $this->conversations->markAsRead($conversationId, $messageId, $this->user2->id);
+
+        // User 3 reads the message
+        $this->conversations->markAsRead($conversationId, $messageId, $user3->id);
+
+        // Get users who read the message
+        $readBy = $this->conversations->getMessageReadBy($messageId);
+
+        // Check if the result contains User 2 and User 3 (but not User 1 who is the sender)
+        $this->assertEquals(2, $readBy->count());
+        $this->assertTrue($readBy->contains(function ($user) {
+            return $user->id === $this->user2->id;
+        }));
+        $this->assertTrue($readBy->contains(function ($user) {
+            return $user->id === 3; // User 3's ID
+        }));
+        $this->assertFalse($readBy->contains(function ($user) {
+            return $user->id === $this->user1->id; // Sender should not be included
+        }));
+    }
+
+    /** @test */
+    public function it_can_get_conversation_read_by()
+    {
+        // Mock Auth user for this specific test
+        Auth::shouldReceive('user')->andReturn($this->user1);
+
+        // Create a third user
+        $user3 = $this->createMockUser(3);
+
+        // Create a conversation with all three users
+        $users = [$this->user1->id, $this->user2->id, $user3->id];
+        $conversationId = $this->conversations->create($users);
+
+        // User 1 sends two messages
+        $content1 = 'Test message 1 from User 1';
+        $messageId1 = $this->conversations->addMessage($conversationId, $content1);
+
+        $content2 = 'Test message 2 from User 1';
+        $messageId2 = $this->conversations->addMessage($conversationId, $content2);
+
+        // User 2 reads both messages
+        $this->conversations->markAsRead($conversationId, $messageId1, $this->user2->id);
+        $this->conversations->markAsRead($conversationId, $messageId2, $this->user2->id);
+
+        // User 3 reads only the first message
+        $this->conversations->markAsRead($conversationId, $messageId1, $user3->id);
+
+        // Get conversation read by information
+        $messagesWithReadStatus = $this->conversations->getConversationReadBy($conversationId);
+
+        // Check if the result contains both messages with correct read status
+        $this->assertEquals(2, $messagesWithReadStatus->count());
+
+        // Find message 1 in the results
+        $message1 = $messagesWithReadStatus->firstWhere('id', $messageId1);
+        $this->assertNotNull($message1);
+        $this->assertEquals(2, $message1['read_count']); // Both User 2 and User 3 read it
+        $this->assertEquals(2, count($message1['read_by']));
+
+        // Find message 2 in the results
+        $message2 = $messagesWithReadStatus->firstWhere('id', $messageId2);
+        $this->assertNotNull($message2);
+        $this->assertEquals(1, $message2['read_count']); // Only User 2 read it
+        $this->assertEquals(1, count($message2['read_by']));
+    }
 }

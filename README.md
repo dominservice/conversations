@@ -220,6 +220,48 @@ Conversations::markReadAll($conversationId, $userId);
 Conversations::markUnreadAll($conversationId, $userId);
 ```
 
+### Read Receipts and "Seen By" Functionality
+
+```php
+// Get all users who have read a specific message
+$readBy = Conversations::getMessageReadBy($messageId);
+
+// Get all messages in a conversation with their read status for all users
+$messagesWithReadStatus = Conversations::getConversationReadBy($conversationId);
+
+// Example of accessing read receipt information
+foreach ($messagesWithReadStatus as $message) {
+    echo "Message: {$message['content']}\n";
+    echo "Read by {$message['read_count']} users\n";
+
+    foreach ($message['read_by'] as $user) {
+        echo "- {$user->name} ({$user->email})\n";
+    }
+}
+```
+
+#### API Endpoints for Read Receipts
+
+The package provides API endpoints for retrieving read receipt information:
+
+- `GET /api/conversations/{uuid}/messages/{messageId}/read-by` - Get all users who have read a specific message
+- `GET /api/conversations/{uuid}/read-by` - Get all messages in a conversation with their read status
+
+#### Real-time Read Receipts
+
+When broadcasting is enabled, the `message.read` event includes information about who has read the message:
+
+```javascript
+Echo.private(`conversation.${conversationId}`)
+    .listen('.message.read', (e) => {
+        console.log(`Message ${e.message_id} was read by ${e.user.name}`);
+        console.log(`Total readers: ${e.read_count}`);
+
+        // Update UI to show who has seen the message
+        updateSeenByList(e.message_id, e.read_by);
+    });
+```
+
 ### Attachments
 
 The package supports file attachments with various security and optimization features:
