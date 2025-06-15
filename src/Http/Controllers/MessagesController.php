@@ -400,4 +400,158 @@ class MessagesController extends Controller
             'data' => $messages,
         ]);
     }
+
+    /**
+     * Get all reactions for a message.
+     *
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @return \Illuminate\Http\Response
+     */
+    public function reactions($uuid, $messageId)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        // Check if the message belongs to the conversation
+        $message = \Dominservice\Conversations\Models\Eloquent\ConversationMessage::where('id', $messageId)
+            ->where('conversation_uuid', $uuid)
+            ->first();
+
+        if (!$message) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.not_found'),
+            ], 404);
+        }
+
+        $reactions = app('conversations')->getMessageReactions($messageId);
+        $reactionsSummary = app('conversations')->getMessageReactionsSummary($messageId);
+
+        return response()->json([
+            'data' => [
+                'message_id' => $messageId,
+                'reactions' => $reactions,
+                'summary' => $reactionsSummary,
+            ],
+        ]);
+    }
+
+    /**
+     * Add a reaction to a message.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @return \Illuminate\Http\Response
+     */
+    public function addReaction(Request $request, $uuid, $messageId)
+    {
+        $request->validate([
+            'reaction' => 'required|string|max:50',
+        ]);
+
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        // Check if the message belongs to the conversation
+        $message = \Dominservice\Conversations\Models\Eloquent\ConversationMessage::where('id', $messageId)
+            ->where('conversation_uuid', $uuid)
+            ->first();
+
+        if (!$message) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.not_found'),
+            ], 404);
+        }
+
+        $reaction = $request->input('reaction');
+        $reactionModel = app('conversations')->addReaction($messageId, $reaction, $userId);
+
+        if (!$reactionModel) {
+            return response()->json([
+                'message' => trans('conversations::conversations.reaction.create_failed'),
+            ], 422);
+        }
+
+        return response()->json([
+            'data' => $reactionModel,
+            'message' => trans('conversations::conversations.reaction.added'),
+        ], 201);
+    }
+
+    /**
+     * Remove a reaction from a message.
+     *
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @param  string  $reaction
+     * @return \Illuminate\Http\Response
+     */
+    public function removeReaction($uuid, $messageId, $reaction)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        // Check if the message belongs to the conversation
+        $message = \Dominservice\Conversations\Models\Eloquent\ConversationMessage::where('id', $messageId)
+            ->where('conversation_uuid', $uuid)
+            ->first();
+
+        if (!$message) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.not_found'),
+            ], 404);
+        }
+
+        $success = app('conversations')->removeReaction($messageId, $reaction, $userId);
+
+        if (!$success) {
+            return response()->json([
+                'message' => trans('conversations::conversations.reaction.remove_failed'),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => trans('conversations::conversations.reaction.removed'),
+        ]);
+    }
 }

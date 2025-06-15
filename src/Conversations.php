@@ -876,4 +876,179 @@ class Conversations
             ];
         });
     }
+
+    /**
+     * Add a reaction to a message.
+     *
+     * @param int $messageId
+     * @param string $reaction
+     * @param mixed|null $userId
+     * @return \Dominservice\Conversations\Models\Eloquent\ConversationMessageReaction|false
+     */
+    public function addReaction(int $messageId, string $reaction, $userId = null)
+    {
+        $userId = $userId ?? \Auth::user()->{\Auth::user()->getKeyName()};
+        $message = ConversationMessage::find($messageId);
+
+        if (!$message) {
+            return false;
+        }
+
+        // Check if user is part of the conversation
+        if (!$this->existsUser($message->conversation_uuid, $userId)) {
+            return false;
+        }
+
+        // Execute before_add_reaction hooks
+        $hookResult = app('Dominservice\Conversations\Hooks\HookManager')->execute('before_add_reaction', [
+            'message_id' => $messageId,
+            'reaction' => $reaction,
+            'user_id' => $userId,
+        ]);
+
+        // If a hook returns false, abort the operation
+        if ($hookResult === false) {
+            return false;
+        }
+
+        // Check if the user has already reacted with this emoji
+        $existingReaction = Models\Eloquent\ConversationMessageReaction::where('message_id', $messageId)
+            ->where(get_user_key(), $userId)
+            ->where('reaction', $reaction)
+            ->first();
+
+        if ($existingReaction) {
+            return $existingReaction; // User already reacted with this emoji
+        }
+
+        // Create the reaction
+        $reactionModel = new Models\Eloquent\ConversationMessageReaction();
+        $reactionModel->message_id = $messageId;
+        $reactionModel->{get_user_key()} = $userId;
+        $reactionModel->reaction = $reaction;
+        $reactionModel->save();
+
+        // Broadcast the reaction added event if broadcasting is enabled
+        if ($this->broadcastManager && $this->broadcastManager->enabled()) {
+            // We'll create this event class later
+            $this->broadcastManager->broadcast(new Events\MessageReactionAdded(
+                $message->conversation_uuid,
+                $messageId,
+                $userId,
+                $reaction
+            ));
+        }
+
+        // Execute after_add_reaction hooks
+        app('Dominservice\Conversations\Hooks\HookManager')->execute('after_add_reaction', [
+            'reaction' => $reactionModel,
+            'message' => $message,
+            'user_id' => $userId,
+        ]);
+
+        return $reactionModel;
+    }
+
+    /**
+     * Remove a reaction from a message.
+     *
+     * @param int $messageId
+     * @param string $reaction
+     * @param mixed|null $userId
+     * @return bool
+     */
+    public function removeReaction(int $messageId, string $reaction, $userId = null)
+    {
+        $userId = $userId ?? \Auth::user()->{\Auth::user()->getKeyName()};
+        $message = ConversationMessage::find($messageId);
+
+        if (!$message) {
+            return false;
+        }
+
+        // Check if user is part of the conversation
+        if (!$this->existsUser($message->conversation_uuid, $userId)) {
+            return false;
+        }
+
+        // Execute before_remove_reaction hooks
+        $hookResult = app('Dominservice\Conversations\Hooks\HookManager')->execute('before_remove_reaction', [
+            'message_id' => $messageId,
+            'reaction' => $reaction,
+            'user_id' => $userId,
+        ]);
+
+        // If a hook returns false, abort the operation
+        if ($hookResult === false) {
+            return false;
+        }
+
+        // Find the reaction
+        $reactionModel = Models\Eloquent\ConversationMessageReaction::where('message_id', $messageId)
+            ->where(get_user_key(), $userId)
+            ->where('reaction', $reaction)
+            ->first();
+
+        if (!$reactionModel) {
+            return false; // Reaction doesn't exist
+        }
+
+        // Delete the reaction
+        $reactionModel->delete();
+
+        // Broadcast the reaction removed event if broadcasting is enabled
+        if ($this->broadcastManager && $this->broadcastManager->enabled()) {
+            // We'll create this event class later
+            $this->broadcastManager->broadcast(new Events\MessageReactionRemoved(
+                $message->conversation_uuid,
+                $messageId,
+                $userId,
+                $reaction
+            ));
+        }
+
+        // Execute after_remove_reaction hooks
+        app('Dominservice\Conversations\Hooks\HookManager')->execute('after_remove_reaction', [
+            'message_id' => $messageId,
+            'reaction' => $reaction,
+            'user_id' => $userId,
+            'message' => $message,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Get all reactions for a message.
+     *
+     * @param int $messageId
+     * @return \Illuminate\Support\Collection
+     */
+    public function getMessageReactions(int $messageId)
+    {
+        $message = ConversationMessage::with('reactions.user')->find($messageId);
+
+        if (!$message) {
+            return collect();
+        }
+
+        return $message->reactions;
+    }
+
+    /**
+     * Get a summary of reactions for a message, grouped by emoji with count.
+     *
+     * @param int $messageId
+     * @return \Illuminate\Support\Collection
+     */
+    public function getMessageReactionsSummary(int $messageId)
+    {
+        $message = ConversationMessage::find($messageId);
+
+        if (!$message) {
+            return collect();
+        }
+
+        return $message->getReactionsSummary();
+    }
 }

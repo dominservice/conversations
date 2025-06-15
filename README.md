@@ -262,6 +262,61 @@ Echo.private(`conversation.${conversationId}`)
     });
 ```
 
+### Message Reactions
+
+The package supports emoji reactions to messages, similar to popular messaging platforms:
+
+```php
+// Add a reaction to a message
+$reactionId = Conversations::addReaction($messageId, '👍');
+
+// Remove a reaction from a message
+Conversations::removeReaction($messageId, '👍');
+
+// Get all reactions for a message
+$reactions = Conversations::getMessageReactions($messageId);
+
+// Get a summary of reactions (grouped by emoji with count)
+$reactionsSummary = Conversations::getMessageReactionsSummary($messageId);
+
+// Check if a message has reactions
+$message = ConversationMessage::with('reactions')->find($messageId);
+if ($message->hasReactions()) {
+    // Message has reactions
+}
+
+// Check if a user has reacted to a message with a specific emoji
+if ($message->hasUserReaction($userId, '👍')) {
+    // User has reacted with thumbs up
+}
+```
+
+#### API Endpoints for Reactions
+
+The package provides API endpoints for managing reactions:
+
+- `GET /api/conversations/{uuid}/messages/{messageId}/reactions` - Get all reactions for a message
+- `POST /api/conversations/{uuid}/messages/{messageId}/reactions` - Add a reaction to a message
+- `DELETE /api/conversations/{uuid}/messages/{messageId}/reactions/{reaction}` - Remove a reaction from a message
+
+#### Real-time Reaction Updates
+
+When broadcasting is enabled, reaction events are broadcast in real-time:
+
+```javascript
+Echo.private(`conversation.${conversationId}`)
+    .listen('.message.reaction.added', (e) => {
+        console.log(`${e.user.name} reacted with ${e.reaction} to message ${e.message_id}`);
+        // Update UI to show the new reaction
+        updateReactions(e.message_id, e.reactions_summary);
+    })
+    .listen('.message.reaction.removed', (e) => {
+        console.log(`${e.user.name} removed ${e.reaction} from message ${e.message_id}`);
+        // Update UI to remove the reaction
+        updateReactions(e.message_id, e.reactions_summary);
+    });
+```
+
 ### Attachments
 
 The package supports file attachments with various security and optimization features:

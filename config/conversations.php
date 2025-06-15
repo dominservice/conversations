@@ -26,6 +26,7 @@ return array(
         'conversation_message_statuses' => 'conversation_message_statuses',
         'conversation_types' => 'conversation_types',
         'conversation_attachments' => 'conversation_attachments',
+        'conversation_message_reactions' => 'conversation_message_reactions',
     ],
 
     /*

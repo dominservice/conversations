@@ -29,6 +29,11 @@ Route::group(['prefix' => $prefix, 'middleware' => $middleware], function () {
     Route::get('/{uuid}/messages/{messageId}/read-by', [MessagesController::class, 'readBy']);
     Route::get('/{uuid}/read-by', [MessagesController::class, 'conversationReadBy']);
 
+    // Reactions routes
+    Route::get('/{uuid}/messages/{messageId}/reactions', [MessagesController::class, 'reactions']);
+    Route::post('/{uuid}/messages/{messageId}/reactions', [MessagesController::class, 'addReaction']);
+    Route::delete('/{uuid}/messages/{messageId}/reactions/{reaction}', [MessagesController::class, 'removeReaction']);
+
     // Typing indicator
     Route::post('/{uuid}/typing', [MessagesController::class, 'typing']);
 });

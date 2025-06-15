@@ -105,4 +105,53 @@ class ConversationMessage extends Model
     {
         return $this->attachments()->first();
     }
+
+    /**
+     * Get the reactions for the message.
+     */
+    public function reactions()
+    {
+        return $this->hasMany(ConversationMessageReaction::class, 'message_id');
+    }
+
+    /**
+     * Check if the message has reactions.
+     *
+     * @return bool
+     */
+    public function hasReactions()
+    {
+        return $this->reactions()->count() > 0;
+    }
+
+    /**
+     * Get reactions grouped by emoji with count.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function getReactionsSummary()
+    {
+        return $this->reactions()
+            ->select('reaction', \DB::raw('count(*) as count'))
+            ->groupBy('reaction')
+            ->get();
+    }
+
+    /**
+     * Check if a user has reacted to this message with a specific emoji.
+     *
+     * @param mixed $userId
+     * @param string $reaction
+     * @return bool
+     */
+    public function hasUserReaction($userId, $reaction = null)
+    {
+        $query = $this->reactions()->byUser($userId);
+
+        if ($reaction !== null) {
+            $query->withReaction($reaction);
+        }
+
+        return $query->exists();
+    }
 }

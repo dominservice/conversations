@@ -384,4 +384,143 @@ class ApiTest extends TestCase
         $this->assertEquals(2, $message1['read_count']); // Both users read the first message
         $this->assertEquals(1, $message2['read_count']); // Only one user read the second message
     }
+
+    public function testGetMessageReactions()
+    {
+        // Create a conversation first
+        $response = $this->actingAs($this->user)
+            ->post('/api/conversations', [
+                'users' => [$this->otherUser->id],
+                'content' => 'Hello, this is a test message',
+            ]);
+
+        $conversationUuid = $response->json('data.uuid');
+
+        // Get the message ID
+        $messagesResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/messages");
+
+        $messageId = $messagesResponse->json('data.0.message_id');
+
+        // Add reactions to the message
+        $this->actingAs($this->user)
+            ->post("/api/conversations/{$conversationUuid}/messages/{$messageId}/reactions", [
+                'reaction' => '👍',
+            ]);
+
+        $this->actingAs($this->otherUser)
+            ->post("/api/conversations/{$conversationUuid}/messages/{$messageId}/reactions", [
+                'reaction' => '❤️',
+            ]);
+
+        // Get the reactions for the message
+        $reactionsResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/messages/{$messageId}/reactions");
+
+        $reactionsResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    'message_id',
+                    'reactions',
+                    'summary'
+                ]
+            ]);
+
+        // Verify the reactions data
+        $this->assertEquals($messageId, $reactionsResponse->json('data.message_id'));
+        $this->assertCount(2, $reactionsResponse->json('data.reactions')); // Two reactions
+        $this->assertCount(2, $reactionsResponse->json('data.summary')); // Two different emoji
+
+        // Verify the summary contains the correct counts
+        $summary = collect($reactionsResponse->json('data.summary'));
+        $thumbsUp = $summary->firstWhere('reaction', '👍');
+        $heart = $summary->firstWhere('reaction', '❤️');
+
+        $this->assertEquals(1, $thumbsUp['count']); // One thumbs up
+        $this->assertEquals(1, $heart['count']); // One heart
+    }
+
+    public function testAddReaction()
+    {
+        // Create a conversation first
+        $response = $this->actingAs($this->user)
+            ->post('/api/conversations', [
+                'users' => [$this->otherUser->id],
+                'content' => 'Hello, this is a test message',
+            ]);
+
+        $conversationUuid = $response->json('data.uuid');
+
+        // Get the message ID
+        $messagesResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/messages");
+
+        $messageId = $messagesResponse->json('data.0.message_id');
+
+        // Add a reaction to the message
+        $reactionResponse = $this->actingAs($this->user)
+            ->post("/api/conversations/{$conversationUuid}/messages/{$messageId}/reactions", [
+                'reaction' => '👍',
+            ]);
+
+        $reactionResponse->assertStatus(201)
+            ->assertJsonStructure([
+                'data',
+                'message'
+            ]);
+
+        // Verify the reaction was added to the database
+        $this->assertDatabaseHas('conversation_message_reactions', [
+            'message_id' => $messageId,
+            'user_id' => $this->user->id,
+            'reaction' => '👍'
+        ]);
+    }
+
+    public function testRemoveReaction()
+    {
+        // Create a conversation first
+        $response = $this->actingAs($this->user)
+            ->post('/api/conversations', [
+                'users' => [$this->otherUser->id],
+                'content' => 'Hello, this is a test message',
+            ]);
+
+        $conversationUuid = $response->json('data.uuid');
+
+        // Get the message ID
+        $messagesResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/messages");
+
+        $messageId = $messagesResponse->json('data.0.message_id');
+
+        // Add a reaction to the message
+        $this->actingAs($this->user)
+            ->post("/api/conversations/{$conversationUuid}/messages/{$messageId}/reactions", [
+                'reaction' => '👍',
+            ]);
+
+        // Verify the reaction was added
+        $this->assertDatabaseHas('conversation_message_reactions', [
+            'message_id' => $messageId,
+            'user_id' => $this->user->id,
+            'reaction' => '👍'
+        ]);
+
+        // Remove the reaction
+        $removeResponse = $this->actingAs($this->user)
+            ->delete("/api/conversations/{$conversationUuid}/messages/{$messageId}/reactions/👍");
+
+        $removeResponse->assertStatus(200)
+            ->assertJson([
+                'message' => 'Reaction removed successfully'
+            ]);
+
+        // Verify the reaction was removed from the database
+        $this->assertDatabaseMissing('conversation_message_reactions', [
+            'message_id' => $messageId,
+            'user_id' => $this->user->id,
+            'reaction' => '👍'
+        ]);
+    }
 }

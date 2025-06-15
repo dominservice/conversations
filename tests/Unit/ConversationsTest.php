@@ -251,4 +251,129 @@ class ConversationsTest extends TestCase
         $this->assertEquals(1, $message2['read_count']); // Only User 2 read it
         $this->assertEquals(1, count($message2['read_by']));
     }
+
+    /** @test */
+    public function it_can_add_a_reaction_to_a_message()
+    {
+        // Mock Auth user for this specific test
+        Auth::shouldReceive('user')->andReturn($this->user1);
+
+        // Create a conversation
+        $users = [$this->user1->id, $this->user2->id];
+        $conversationId = $this->conversations->create($users);
+
+        // Add a message
+        $content = 'Test message for reaction';
+        $messageId = $this->conversations->addMessage($conversationId, $content);
+
+        // Add a reaction to the message
+        $reaction = '👍';
+        $reactionModel = $this->conversations->addReaction($messageId, $reaction);
+
+        // Check if the reaction was added
+        $this->assertNotFalse($reactionModel);
+        $this->assertDatabaseHas('conversation_message_reactions', [
+            'message_id' => $messageId,
+            'user_id' => $this->user1->id,
+            'reaction' => $reaction
+        ]);
+    }
+
+    /** @test */
+    public function it_can_remove_a_reaction_from_a_message()
+    {
+        // Mock Auth user for this specific test
+        Auth::shouldReceive('user')->andReturn($this->user1);
+
+        // Create a conversation
+        $users = [$this->user1->id, $this->user2->id];
+        $conversationId = $this->conversations->create($users);
+
+        // Add a message
+        $content = 'Test message for reaction';
+        $messageId = $this->conversations->addMessage($conversationId, $content);
+
+        // Add a reaction to the message
+        $reaction = '👍';
+        $this->conversations->addReaction($messageId, $reaction);
+
+        // Remove the reaction
+        $result = $this->conversations->removeReaction($messageId, $reaction);
+
+        // Check if the reaction was removed
+        $this->assertTrue($result);
+        $this->assertDatabaseMissing('conversation_message_reactions', [
+            'message_id' => $messageId,
+            'user_id' => $this->user1->id,
+            'reaction' => $reaction
+        ]);
+    }
+
+    /** @test */
+    public function it_can_get_reactions_for_a_message()
+    {
+        // Mock Auth user for this specific test
+        Auth::shouldReceive('user')->andReturn($this->user1);
+
+        // Create a conversation with a third user
+        $user3 = $this->createMockUser(3);
+        $users = [$this->user1->id, $this->user2->id, $user3->id];
+        $conversationId = $this->conversations->create($users);
+
+        // Add a message
+        $content = 'Test message for reactions';
+        $messageId = $this->conversations->addMessage($conversationId, $content);
+
+        // Add reactions from different users
+        $this->conversations->addReaction($messageId, '👍', $this->user1->id);
+        $this->conversations->addReaction($messageId, '❤️', $this->user2->id);
+        $this->conversations->addReaction($messageId, '👍', $user3->id); // Same reaction as user1
+
+        // Get all reactions for the message
+        $reactions = $this->conversations->getMessageReactions($messageId);
+
+        // Check if all reactions are returned
+        $this->assertEquals(3, $reactions->count());
+
+        // Check if the reactions contain the correct data
+        $this->assertTrue($reactions->contains('reaction', '👍'));
+        $this->assertTrue($reactions->contains('reaction', '❤️'));
+    }
+
+    /** @test */
+    public function it_can_get_reactions_summary_for_a_message()
+    {
+        // Mock Auth user for this specific test
+        Auth::shouldReceive('user')->andReturn($this->user1);
+
+        // Create a conversation with a third user
+        $user3 = $this->createMockUser(3);
+        $users = [$this->user1->id, $this->user2->id, $user3->id];
+        $conversationId = $this->conversations->create($users);
+
+        // Add a message
+        $content = 'Test message for reactions summary';
+        $messageId = $this->conversations->addMessage($conversationId, $content);
+
+        // Add reactions from different users
+        $this->conversations->addReaction($messageId, '👍', $this->user1->id);
+        $this->conversations->addReaction($messageId, '❤️', $this->user2->id);
+        $this->conversations->addReaction($messageId, '👍', $user3->id); // Same reaction as user1
+
+        // Get reactions summary for the message
+        $summary = $this->conversations->getMessageReactionsSummary($messageId);
+
+        // Check if the summary contains the correct counts
+        $this->assertEquals(2, $summary->count()); // Two different reactions
+
+        // Find the thumbs up reaction in the summary
+        $thumbsUp = $summary->firstWhere('reaction', '👍');
+        $this->assertNotNull($thumbsUp);
+        $this->assertEquals(2, $thumbsUp->count); // Two users reacted with thumbs up
+
+        // Find the heart reaction in the summary
+        $heart = $summary->firstWhere('reaction', '❤️');
+        $this->assertNotNull($heart);
+        $this->assertEquals(1, $heart->count); // One user reacted with heart
+    }
 }
