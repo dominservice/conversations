@@ -50,7 +50,7 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__.'/../database/migrations/column_add_conversation_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_table'),
             __DIR__.'/../database/migrations/column_add_conversation_message_statuses_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_message_statuses_table'),
             __DIR__.'/../database/migrations/column_add_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_relations_table'),
-            __DIR__.'/../database/migrations/update_to_version_3.php.stub' => $this->getMigrationFileName($filesystem, 'update_to_version_3'),
+            __DIR__.'/../database/migrations/update_to_version_3.php.stub' => $this->getMigrationFileName($filesystem, 'update_conversations_to_version_3'),
         ], 'conversations-migrations');
 
         // Publish translations
@@ -78,7 +78,7 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__.'/../database/migrations/column_add_conversation_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_table'),
             __DIR__.'/../database/migrations/column_add_conversation_message_statuses_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_message_statuses_table'),
             __DIR__.'/../database/migrations/column_add_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_relations_table'),
-            __DIR__.'/../database/migrations/update_to_version_3.php.stub' => $this->getMigrationFileName($filesystem, 'update_to_version_3'),
+            __DIR__.'/../database/migrations/update_to_version_3.php.stub' => $this->getMigrationFileName($filesystem, 'update_conversations_to_version_3'),
             __DIR__ . '/../lang' => $targetLangPath,
             __DIR__ . '/Http/routes.php' => base_path('routes/conversation-api.php'),
         ], 'conversations');
