@@ -1,3 +1,5 @@
+
+[![Packagist](https://img.shields.io/packagist/v/dominservice/conversations.svg)]()
 [![Latest Version](https://img.shields.io/github/release/dominservice/conversations.svg?style=flat-square)](https://github.com/dominservice/conversations/releases)
 [![Total Downloads](https://img.shields.io/packagist/dt/dominservice/conversations.svg?style=flat-square)](https://packagist.org/packages/dominservice/conversations)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
