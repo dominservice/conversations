@@ -62,6 +62,11 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__.'/../config/conversations.php',
             'conversations'
         );
+
+        // Register the Conversations class as a singleton
+        $this->app->singleton('conversations', function ($app) {
+            return new Conversations();
+        });
 	}
 
 	/**

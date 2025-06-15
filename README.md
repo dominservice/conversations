@@ -58,6 +58,39 @@ php artisan migrate
 ### REMEMBER
 Configure the package in the __config/conversations.php__ file 
 
+# Testing
+
+The package includes automated tests to ensure functionality works as expected. To run the tests:
+
+## Requirements
+
+- PHP with SQLite extension enabled (`php-sqlite3`)
+
+If you don't have the SQLite extension installed, you can install it on Ubuntu/Debian with:
+
+```bash
+sudo apt-get install php-sqlite3
+```
+
+On CentOS/RHEL:
+
+```bash
+sudo yum install php-sqlite3
+```
+
+## Running Tests
+
+```bash
+composer install
+vendor/bin/phpunit
+```
+
+Alternatively, you can use the provided script:
+
+```bash
+./run-tests.sh
+```
+
 # Usage
 
 #### __Create New Conversation:__
@@ -143,10 +176,10 @@ Example:
 foreach ( $conversations as $conv ) {
     $getNumOfUsers = $conv->getNumOfUsers();
     $users = $conv->users; /* Collection */
-            
+
     /* $lastMessage Dominservice\Conversations\Entities\Message */
     $lastMessage = $conv->getLastMessage();
-            
+
     $senderId = $lastMessage->sender;
     $content = $lastMessage->content;
     $status = $lastMessage->status;
@@ -196,14 +229,14 @@ conversation_mark_as_unread_all($convUuid, $userId = null);
         $conversations = conversations($currentUser->id);
         //array for storing our users data, as that Conversations only provides user id's
         $users = collect();
-        
+
         //gathering users
         foreach ( $conversations as $conv ) {
             $users->push($conv->users);
         }
         //making sure each user appears once
         $users = $users->unique();
-        
+
         return View::make('conversations_page')
             ->with('users', $users)
             ->with('user', $currentUser)
