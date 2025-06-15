@@ -1,0 +1,263 @@
+<?php
+
+namespace Dominservice\Conversations\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Dominservice\Conversations\Facade\ConversationsHooks;
+
+class MessagesController extends Controller
+{
+    /**
+     * Display a listing of the messages in a conversation.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $uuid
+     * @return \Illuminate\Http\Response
+     */
+    public function index(Request $request, $uuid)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        $newToOld = $request->input('order', 'asc') === 'asc';
+        $limit = $request->input('limit');
+        $start = $request->input('start');
+
+        $messages = app('conversations')->getMessages($uuid, $userId, $newToOld, $limit, $start);
+
+        // Execute hook after retrieving messages
+        ConversationsHooks::execute('after_get_messages', [
+            'messages' => $messages,
+            'conversation_uuid' => $uuid,
+            'user_id' => $userId,
+        ]);
+
+        return response()->json([
+            'data' => $messages,
+        ]);
+    }
+
+    /**
+     * Store a newly created message in the conversation.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $uuid
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request, $uuid)
+    {
+        $request->validate([
+            'content' => 'required|string',
+        ]);
+
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        $content = $request->input('content');
+        $message = app('conversations')->addMessage($uuid, $content, false, true);
+
+        if (!$message) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.create_failed'),
+            ], 422);
+        }
+
+        return response()->json([
+            'data' => $message,
+            'message' => trans('conversations::conversations.message.sent'),
+        ], 201);
+    }
+
+    /**
+     * Display a listing of unread messages in a conversation.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $uuid
+     * @return \Illuminate\Http\Response
+     */
+    public function unread(Request $request, $uuid)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        $newToOld = $request->input('order', 'asc') === 'asc';
+        $limit = $request->input('limit');
+        $start = $request->input('start');
+
+        $messages = app('conversations')->getUnreadMessages($uuid, $userId, $newToOld, $limit, $start);
+
+        return response()->json([
+            'data' => $messages,
+        ]);
+    }
+
+    /**
+     * Mark a message as read.
+     *
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @return \Illuminate\Http\Response
+     */
+    public function markAsRead($uuid, $messageId)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        app('conversations')->markAsRead($uuid, $messageId, $userId);
+
+        return response()->json([
+            'message' => trans('conversations::conversations.message.marked_read'),
+        ]);
+    }
+
+    /**
+     * Mark a message as unread.
+     *
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @return \Illuminate\Http\Response
+     */
+    public function markAsUnread($uuid, $messageId)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        app('conversations')->markAsUnread($uuid, $messageId, $userId);
+
+        return response()->json([
+            'message' => trans('conversations::conversations.message.marked_unread'),
+        ]);
+    }
+
+    /**
+     * Remove the specified message.
+     *
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($uuid, $messageId)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        app('conversations')->markAsDeleted($uuid, $messageId, $userId);
+
+        return response()->json([
+            'message' => trans('conversations::conversations.message.deleted'),
+        ]);
+    }
+
+    /**
+     * Broadcast that the user is typing.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $uuid
+     * @return \Illuminate\Http\Response
+     */
+    public function typing(Request $request, $uuid)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        $userName = $request->input('user_name');
+
+        app('conversations')->broadcastUserTyping($uuid, $userId, $userName);
+
+        return response()->json([
+            'message' => trans('conversations::conversations.message.typing_sent'),
+        ]);
+    }
+}

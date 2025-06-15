@@ -37,10 +37,12 @@ class ConversationsServiceProvider extends ServiceProvider
     private  $lpMigration = 0;
 
     public function boot(Filesystem $filesystem) {
+        // Publish config
         $this->publishes([
             __DIR__ . '/../config/conversations.php' => config_path('conversations.php'),
         ], 'config');
 
+        // Publish migrations
         $this->publishes([
             __DIR__.'/../database/migrations/create_conversations_tables.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversations_tables'),
             __DIR__.'/../database/migrations/create_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversation_relations_table'),
@@ -49,6 +51,19 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__.'/../database/migrations/column_add_conversation_message_statuses_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_message_statuses_table'),
             __DIR__.'/../database/migrations/column_add_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_relations_table'),
         ], 'migrations');
+
+        // Publish translations
+        $this->publishes([
+            __DIR__ . '/../resources/lang' => resource_path('lang/vendor/conversations'),
+        ], 'translations');
+
+        // Publish routes
+        $this->publishes([
+            __DIR__ . '/Http/routes.php' => base_path('routes/conversation-api.php'),
+        ], 'routes');
+
+        // Load translations
+        $this->loadTranslationsFrom(__DIR__ . '/../resources/lang', 'conversations');
     }
 
 	/**
@@ -68,11 +83,40 @@ class ConversationsServiceProvider extends ServiceProvider
             return new Broadcasting\BroadcastManager($app, $app->make(\Illuminate\Broadcasting\BroadcastManager::class));
         });
 
+        // Register the HookManager
+        $this->app->singleton(Hooks\HookManager::class, function ($app) {
+            return new Hooks\HookManager();
+        });
+
         // Register the Conversations class as a singleton
         $this->app->singleton('conversations', function ($app) {
             return new Conversations($app->make('conversations.broadcasting'));
         });
+
+        // Register API routes if enabled
+        if (config('conversations.api.enabled', true)) {
+            $this->registerRoutes();
+        }
 	}
+
+    /**
+     * Register the package routes.
+     *
+     * @return void
+     */
+    protected function registerRoutes()
+    {
+        // Check if the routes have been published
+        $publishedRoutesPath = base_path('routes/conversation-api.php');
+
+        if (file_exists($publishedRoutesPath)) {
+            // If published routes exist, load them
+            $this->loadRoutesFrom($publishedRoutesPath);
+        } else {
+            // Otherwise, load the package routes
+            $this->loadRoutesFrom(__DIR__.'/Http/routes.php');
+        }
+    }
 
 	/**
 	 * Get the services provided by the provider.

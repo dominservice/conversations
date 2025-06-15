@@ -73,6 +73,19 @@ class Conversations
     {
         $users = $this->userIds($users);
 
+        // Execute before_create_conversation hooks
+        $hookResult = app('Dominservice\Conversations\Hooks\HookManager')->execute('before_create_conversation', [
+            'users' => $users,
+            'relation_type' => $relationType,
+            'relation_id' => $relationId,
+            'content' => $content,
+        ]);
+
+        // If a hook returns false, abort the operation
+        if ($hookResult === false) {
+            return false;
+        }
+
         if (count((array)$users) > 1) {
             $conversation = new Conversation();
             $conversation->owner_uuid = \Auth::user()->{\Auth::user()->getKeyName()};
@@ -88,6 +101,16 @@ class Conversations
             if (!empty($content)) {
                 $this->addMessage($conversation->uuid, $content);
             }
+
+            // Execute after_create_conversation hooks
+            app('Dominservice\Conversations\Hooks\HookManager')->execute('after_create_conversation', [
+                'conversation' => $conversation,
+                'users' => $users,
+                'relation_type' => $relationType,
+                'relation_id' => $relationId,
+                'content' => $content,
+            ]);
+
             if ($getObject) {
                 return $conversation;
             }
@@ -106,6 +129,18 @@ class Conversations
      */
     public function addMessage($convUuid, $content, $addUser = false, $getObject = false)
     {
+        // Execute before_add_message hooks
+        $hookResult = app('Dominservice\Conversations\Hooks\HookManager')->execute('before_add_message', [
+            'conversation_uuid' => $convUuid,
+            'content' => $content,
+            'add_user' => $addUser,
+        ]);
+
+        // If a hook returns false, abort the operation
+        if ($hookResult === false) {
+            return false;
+        }
+
         if (!empty($convUuid)
             && !empty($content)
             && (($convUuid instanceof Conversation && $conversation = $convUuid)
@@ -153,6 +188,14 @@ class Conversations
             if ($this->broadcastManager && $this->broadcastManager->enabled()) {
                 $this->broadcastManager->broadcast(new MessageSent($message));
             }
+
+            // Execute after_add_message hooks
+            app('Dominservice\Conversations\Hooks\HookManager')->execute('after_add_message', [
+                'message' => $message,
+                'conversation' => $conversation,
+                'user_id' => $userId,
+                'content' => $content,
+            ]);
 
             if ($getObject) {
                 return $message;
@@ -276,6 +319,17 @@ class Conversations
      */
     public function delete($convUuid, $userId)
     {
+        // Execute before_delete_conversation hooks
+        $hookResult = app('Dominservice\Conversations\Hooks\HookManager')->execute('before_delete_conversation', [
+            'conversation_uuid' => $convUuid,
+            'user_id' => $userId,
+        ]);
+
+        // If a hook returns false, abort the operation
+        if ($hookResult === false) {
+            return;
+        }
+
         $messageStatuses = ConversationMessageStatus::whereHas('message', function ($q) use ($convUuid) {
             $q->where('conversation_uuid', $convUuid);
         })
@@ -295,12 +349,21 @@ class Conversations
             ->whereNotIn('status', [self::DELETED, self::ARCHIVED])
             ->count();
 
+        $conversationDeleted = false;
         if ($noDeletedCount === 0 && $con = Conversation::uuid($convUuid)) {
             $con->messages()->delete();
             $con->relations()->delete();
             ConversationUser::where('conversation_uuid', $convUuid)->delete();
             $con->delete();
+            $conversationDeleted = true;
         }
+
+        // Execute after_delete_conversation hooks
+        app('Dominservice\Conversations\Hooks\HookManager')->execute('after_delete_conversation', [
+            'conversation_uuid' => $convUuid,
+            'user_id' => $userId,
+            'conversation_deleted' => $conversationDeleted,
+        ]);
     }
 
     /**
@@ -451,12 +514,31 @@ class Conversations
      */
     public function markAsRead($convUuid, $msgId, $userId): void
     {
+        // Execute before_mark_as_read hooks
+        $hookResult = app('Dominservice\Conversations\Hooks\HookManager')->execute('before_mark_as_read', [
+            'conversation_uuid' => $convUuid,
+            'message_id' => $msgId,
+            'user_id' => $userId,
+        ]);
+
+        // If a hook returns false, abort the operation
+        if ($hookResult === false) {
+            return;
+        }
+
         $this->markAs($convUuid, $msgId, $userId, self::READ);
 
         // Broadcast the message read event
         if ($this->broadcastManager && $this->broadcastManager->enabled()) {
             $this->broadcastManager->broadcast(new MessageRead($convUuid, $msgId, $userId));
         }
+
+        // Execute after_mark_as_read hooks
+        app('Dominservice\Conversations\Hooks\HookManager')->execute('after_mark_as_read', [
+            'conversation_uuid' => $convUuid,
+            'message_id' => $msgId,
+            'user_id' => $userId,
+        ]);
     }
 
     /**
@@ -476,12 +558,31 @@ class Conversations
      */
     public function markAsDeleted($convUuid, $msgId, $userId): void
     {
+        // Execute before_mark_as_deleted hooks
+        $hookResult = app('Dominservice\Conversations\Hooks\HookManager')->execute('before_mark_as_deleted', [
+            'conversation_uuid' => $convUuid,
+            'message_id' => $msgId,
+            'user_id' => $userId,
+        ]);
+
+        // If a hook returns false, abort the operation
+        if ($hookResult === false) {
+            return;
+        }
+
         $this->markAs($convUuid, $msgId, $userId, self::DELETED);
 
         // Broadcast the message deleted event
         if ($this->broadcastManager && $this->broadcastManager->enabled()) {
             $this->broadcastManager->broadcast(new MessageDeleted($convUuid, $msgId, $userId));
         }
+
+        // Execute after_mark_as_deleted hooks
+        app('Dominservice\Conversations\Hooks\HookManager')->execute('after_mark_as_deleted', [
+            'conversation_uuid' => $convUuid,
+            'message_id' => $msgId,
+            'user_id' => $userId,
+        ]);
     }
 
     /**

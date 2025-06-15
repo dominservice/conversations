@@ -58,6 +58,14 @@ php artisan migrate
 ### REMEMBER
 Configure the package in the __config/conversations.php__ file 
 
+## Additional Documentation
+
+- [API Documentation](README-API.md) - Information about the REST API endpoints
+- [Broadcasting Documentation](README-BROADCASTING.md) - Information about real-time broadcasting
+- [Hooks Documentation](README-HOOKS.md) - Information about the hook system
+- [Translations Documentation](README-TRANSLATIONS.md) - Information about customizing messages in different languages
+- [Routes Documentation](README-ROUTES.md) - Information about customizing API routes
+
 # Testing
 
 The package includes automated tests to ensure functionality works as expected. To run the tests:

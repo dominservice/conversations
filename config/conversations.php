@@ -29,6 +29,57 @@ return array(
 
     /*
     |--------------------------------------------------------------------------
+    | API Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Here you can configure the API settings for the conversations package.
+    | You can enable/disable the API and configure the routes prefix.
+    |
+    */
+    'api' => [
+        'enabled' => env('CONVERSATIONS_API_ENABLED', true),
+        'prefix' => 'api/conversations',
+        'middleware' => ['api', 'auth:api'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Hooks Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Here you can configure hooks that will be executed before and after
+    | certain actions in the conversations package. You can register callbacks
+    | for each hook point to execute custom code.
+    |
+    | Available hook points:
+    | - before_create_conversation
+    | - after_create_conversation
+    | - before_add_message
+    | - after_add_message
+    | - before_mark_as_read
+    | - after_mark_as_read
+    | - before_mark_as_deleted
+    | - after_mark_as_deleted
+    | - before_delete_conversation
+    | - after_delete_conversation
+    |
+    | Example:
+    | 'hooks' => [
+    |     'after_add_message' => [
+    |         function ($message, $conversation) {
+    |             // Your custom code here
+    |         },
+    |         'App\\Hooks\\ConversationHooks@afterAddMessage',
+    |     ],
+    | ],
+    |
+    */
+    'hooks' => [
+        // Register your hooks here
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Broadcasting Configuration
     |--------------------------------------------------------------------------
     |
