@@ -44,6 +44,6 @@ class ConversationTypeTranslation extends Model
      */
     public function getTable()
     {
-        return 'conversation_type_translations';
+        return config('conversations.tables.conversation_type_translations');
     }
 }

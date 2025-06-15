@@ -54,9 +54,15 @@ class ConversationsServiceProvider extends ServiceProvider
         ], 'migrations');
 
         // Publish translations
+        $targetLangPath = function_exists('lang_path')
+            ? lang_path('vendor/conversations')
+            : (is_dir(base_path('lang'))
+                ? base_path('lang/vendor/conversations')
+                : resource_path('lang/vendor/conversations'));
         $this->publishes([
-            __DIR__ . '/../resources/lang' => resource_path('lang/vendor/conversations'),
+            __DIR__ . '/..//lang' => $targetLangPath,
         ], 'translations');
+
 
         // Publish routes
         $this->publishes([
@@ -64,7 +70,7 @@ class ConversationsServiceProvider extends ServiceProvider
         ], 'routes');
 
         // Load translations
-        $this->loadTranslationsFrom(__DIR__ . '/../resources/lang', 'conversations');
+        $this->loadTranslationsFrom(__DIR__ . '/../lang', 'conversations');
     }
 
 	/**

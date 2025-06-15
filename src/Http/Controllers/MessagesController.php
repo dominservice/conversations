@@ -2,6 +2,7 @@
 
 namespace Dominservice\Conversations\Http\Controllers;
 
+use Dominservice\Conversations\Models\Eloquent\ConversationMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Dominservice\Conversations\Facade\ConversationsHooks;
@@ -13,7 +14,7 @@ class MessagesController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  string  $uuid
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request, $uuid)
     {
@@ -56,7 +57,7 @@ class MessagesController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  string  $uuid
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request, $uuid)
     {
@@ -123,7 +124,7 @@ class MessagesController extends Controller
      *
      * @param  string  $uuid
      * @param  int  $messageId
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function attachments($uuid, $messageId)
     {
@@ -164,7 +165,7 @@ class MessagesController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  string  $uuid
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function unread(Request $request, $uuid)
     {
@@ -200,7 +201,7 @@ class MessagesController extends Controller
      *
      * @param  string  $uuid
      * @param  int  $messageId
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function markAsRead($uuid, $messageId)
     {
@@ -232,7 +233,7 @@ class MessagesController extends Controller
      *
      * @param  string  $uuid
      * @param  int  $messageId
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function markAsUnread($uuid, $messageId)
     {
@@ -264,7 +265,7 @@ class MessagesController extends Controller
      *
      * @param  string  $uuid
      * @param  int  $messageId
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy($uuid, $messageId)
     {
@@ -297,7 +298,7 @@ class MessagesController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @param  string  $uuid
      * @param  int  $messageId
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $uuid, $messageId)
     {
@@ -360,7 +361,7 @@ class MessagesController extends Controller
      *
      * @param  string  $uuid
      * @param  int  $messageId
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function checkEditable($uuid, $messageId)
     {
@@ -412,7 +413,7 @@ class MessagesController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  string  $uuid
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function typing(Request $request, $uuid)
     {
@@ -446,7 +447,7 @@ class MessagesController extends Controller
      *
      * @param  string  $uuid
      * @param  int  $messageId
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function readBy($uuid, $messageId)
     {
@@ -492,7 +493,7 @@ class MessagesController extends Controller
      * Get all messages in a conversation with their read status for all users.
      *
      * @param  string  $uuid
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function conversationReadBy($uuid)
     {
@@ -524,7 +525,7 @@ class MessagesController extends Controller
      *
      * @param  string  $uuid
      * @param  int  $messageId
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function thread($uuid, $messageId)
     {
@@ -577,7 +578,7 @@ class MessagesController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @param  string  $uuid
      * @param  int  $messageId
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function reply(Request $request, $uuid, $messageId)
     {
@@ -654,7 +655,7 @@ class MessagesController extends Controller
      *
      * @param  string  $uuid
      * @param  int  $messageId
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function reactions($uuid, $messageId)
     {
@@ -703,7 +704,7 @@ class MessagesController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @param  string  $uuid
      * @param  int  $messageId
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function addReaction(Request $request, $uuid, $messageId)
     {
@@ -759,7 +760,7 @@ class MessagesController extends Controller
      * @param  string  $uuid
      * @param  int  $messageId
      * @param  string  $reaction
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function removeReaction($uuid, $messageId, $reaction)
     {

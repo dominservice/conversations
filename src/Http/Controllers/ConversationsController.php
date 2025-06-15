@@ -12,7 +12,7 @@ class ConversationsController extends Controller
      * Display a listing of the conversations.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
@@ -39,7 +39,7 @@ class ConversationsController extends Controller
      * Store a newly created conversation.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -74,7 +74,7 @@ class ConversationsController extends Controller
      * Display the specified conversation.
      *
      * @param  string  $uuid
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show($uuid)
     {
@@ -113,7 +113,7 @@ class ConversationsController extends Controller
      * Remove the specified conversation.
      *
      * @param  string  $uuid
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy($uuid)
     {

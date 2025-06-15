@@ -222,10 +222,41 @@ conversationRef.on('child_added', (snapshot) => {
 
 ## Dependencies
 
-Depending on the driver you choose, you may need to install additional packages:
+Depending on the driver you choose, you may need to install additional packages. These packages are listed as suggestions in the `composer.json` file and are not installed by default.
+
+### Installing Driver Dependencies
+
+You can install the required package for your chosen driver using Composer:
 
 - **Pusher**: `composer require pusher/pusher-php-server`
 - **Laravel WebSockets**: `composer require beyondcode/laravel-websockets`
 - **Firebase**: `composer require kreait/firebase-php`
 - **MQTT**: `composer require php-mqtt/client`
 - **Socket.IO**: No additional packages required (uses Guzzle HTTP client)
+
+### Moving Suggested Dependencies to Required Dependencies
+
+If you want to make a driver dependency a permanent part of your project, you can move it from the "suggest" section to the "require" section in your `composer.json` file.
+
+For example, to add Firebase as a required dependency (and remove it from suggestions):
+
+```json
+{
+    "require": {
+        "php": ">=8.1",
+        "laravel/framework": "^9|^10|^11|^12",
+        "intervention/image": "^3.0",
+        "astrotomic/laravel-translatable": "^11.0",
+        "kreait/firebase-php": "^6.0"
+    },
+    "suggest": {
+        "pusher/pusher-php-server": "Required to use the Pusher broadcast driver (^7.0).",
+        "beyondcode/laravel-websockets": "Required to use the Laravel WebSockets broadcast driver (^1.13).",
+        "php-mqtt/client": "Required to use the MQTT broadcast driver (^1.0)."
+    }
+}
+```
+
+Note that in this example, we've added `kreait/firebase-php` to the `require` section and removed it from the `suggest` section.
+
+After updating your `composer.json` file, run `composer update` to install the required package.
