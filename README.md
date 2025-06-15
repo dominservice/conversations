@@ -478,3 +478,7 @@ This package is open-sourced software licensed under the [MIT license](LICENSE).
 - [dominservice](https://github.com/dominservice)
 - [tzookb/tbmsg](https://github.com/tzookb/tbmsg) (Original inspiration)
 - [All Contributors](../../contributors)
+
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/dominservice)
+
