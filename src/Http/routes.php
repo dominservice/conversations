@@ -38,6 +38,10 @@ Route::group(['prefix' => $prefix, 'middleware' => $middleware], function () {
     Route::post('/{uuid}/messages/{messageId}/reactions', [MessagesController::class, 'addReaction']);
     Route::delete('/{uuid}/messages/{messageId}/reactions/{reaction}', [MessagesController::class, 'removeReaction']);
 
+    // Message editing routes
+    Route::put('/{uuid}/messages/{messageId}', [MessagesController::class, 'update']);
+    Route::get('/{uuid}/messages/{messageId}/editable', [MessagesController::class, 'checkEditable']);
+
     // Typing indicator
     Route::post('/{uuid}/typing', [MessagesController::class, 'typing']);
 });

@@ -50,10 +50,7 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__.'/../database/migrations/column_add_conversation_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_table'),
             __DIR__.'/../database/migrations/column_add_conversation_message_statuses_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_message_statuses_table'),
             __DIR__.'/../database/migrations/column_add_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_relations_table'),
-            __DIR__.'/../database/migrations/add_attachment_support_to_conversation_messages_table.php.stub' => $this->getMigrationFileName($filesystem, 'add_attachment_support_to_conversation_messages_table'),
-            __DIR__.'/../database/migrations/create_conversation_type_translations_table.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversation_type_translations_table'),
-            __DIR__.'/../database/migrations/add_thread_support_to_conversation_messages_table.php.stub' => $this->getMigrationFileName($filesystem, 'add_thread_support_to_conversation_messages_table'),
-            __DIR__.'/../database/migrations/add_message_editing_support.php.stub' => $this->getMigrationFileName($filesystem, 'add_message_editing_support'),
+            __DIR__.'/../database/migrations/update_to_version_3.php.stub' => $this->getMigrationFileName($filesystem, 'update_to_version_3'),
         ], 'migrations');
 
         // Publish translations

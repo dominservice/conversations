@@ -523,4 +523,97 @@ class ApiTest extends TestCase
             'reaction' => '👍'
         ]);
     }
+
+    public function testEditMessage()
+    {
+        // Enable message editing
+        Config::set('conversations.message_editing.enabled', true);
+        Config::set('conversations.message_editing.time_limit', 30); // 30 minutes
+
+        // Create a conversation first
+        $response = $this->actingAs($this->user)
+            ->post('/api/conversations', [
+                'users' => [$this->otherUser->id],
+                'content' => 'Hello, this is a test message',
+            ]);
+
+        $conversationUuid = $response->json('data.uuid');
+
+        // Get the message ID
+        $messagesResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/messages");
+
+        $messageId = $messagesResponse->json('data.0.message_id');
+
+        // Edit the message
+        $editResponse = $this->actingAs($this->user)
+            ->put("/api/conversations/{$conversationUuid}/messages/{$messageId}", [
+                'content' => 'This is the edited message',
+            ]);
+
+        $editResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'data',
+                'message'
+            ]);
+
+        // Verify the message was updated in the database
+        $this->assertDatabaseHas('conversation_messages', [
+            'id' => $messageId,
+            'content' => 'This is the edited message',
+        ]);
+
+        // Verify the message has an edited_at timestamp
+        $message = \Dominservice\Conversations\Models\Eloquent\ConversationMessage::find($messageId);
+        $this->assertNotNull($message->edited_at);
+    }
+
+    public function testCheckMessageEditable()
+    {
+        // Enable message editing
+        Config::set('conversations.message_editing.enabled', true);
+        Config::set('conversations.message_editing.time_limit', 30); // 30 minutes
+
+        // Create a conversation first
+        $response = $this->actingAs($this->user)
+            ->post('/api/conversations', [
+                'users' => [$this->otherUser->id],
+                'content' => 'Hello, this is a test message',
+            ]);
+
+        $conversationUuid = $response->json('data.uuid');
+
+        // Get the message ID
+        $messagesResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/messages");
+
+        $messageId = $messagesResponse->json('data.0.message_id');
+
+        // Check if the message is editable
+        $editableResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/messages/{$messageId}/editable");
+
+        $editableResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    'is_editable',
+                    'editable_flag',
+                    'time_limit',
+                    'editable_until',
+                    'has_been_edited',
+                    'edited_at'
+                ]
+            ]);
+
+        // Verify that the message is editable by the sender
+        $this->assertTrue($editableResponse->json('data.is_editable'));
+
+        // Test that another user cannot edit the message
+        $editResponse = $this->actingAs($this->otherUser)
+            ->put("/api/conversations/{$conversationUuid}/messages/{$messageId}", [
+                'content' => 'This should not work',
+            ]);
+
+        $editResponse->assertStatus(403);
+    }
 }

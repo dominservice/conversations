@@ -347,6 +347,93 @@ if ($message->hasAttachments()) {
 }
 ```
 
+### Message Editing
+
+The package allows users to edit their messages within a configurable time window:
+
+```php
+// Edit a message
+$updatedMessage = Conversations::editMessage($messageId, 'This is the updated content');
+
+// Check if a message is editable by the current user
+$isEditable = Conversations::isMessageEditable($messageId);
+
+// Set whether a message is editable (override the time limit)
+Conversations::setMessageEditable($messageId, false); // Disable editing for this message
+```
+
+#### API Endpoints for Message Editing
+
+The package provides API endpoints for message editing:
+
+- `PUT /api/conversations/{uuid}/messages/{messageId}` - Edit a message
+- `GET /api/conversations/{uuid}/messages/{messageId}/editable` - Check if a message is editable
+
+#### Real-time Message Editing Updates
+
+When broadcasting is enabled, message edit events are broadcast in real-time:
+
+```javascript
+Echo.private(`conversation.${conversationId}`)
+    .listen('.message.edited', (e) => {
+        console.log(`Message ${e.message_id} was edited by ${e.user.name}`);
+        console.log(`New content: ${e.content}`);
+
+        // Update UI to show the edited message
+        updateMessageContent(e.message_id, e.content, e.edited_at);
+    });
+```
+
+### Message Threading
+
+The package supports threaded replies to messages, similar to popular messaging platforms:
+
+```php
+// Reply to a message
+$replyMessageId = Conversations::replyToMessage($parentMessageId, 'This is a reply to the parent message');
+
+// Add a message with a parent ID
+$messageId = Conversations::addMessage($conversationId, 'This is a reply', false, false, [], $parentMessageId);
+
+// Check if a message is a reply
+$message = ConversationMessage::find($messageId);
+if ($message->isReply()) {
+    // Message is a reply to another message
+    $parentMessage = $message->parent;
+}
+
+// Get all replies to a message
+$message = ConversationMessage::with('replies')->find($parentMessageId);
+if ($message->hasReplies()) {
+    $replies = $message->replies;
+}
+
+// Get the thread root (the topmost parent in a thread)
+$threadRoot = $message->getThreadRoot();
+```
+
+#### API Endpoints for Message Threading
+
+The package provides API endpoints for message threading:
+
+- `POST /api/conversations/{uuid}/messages/{messageId}/reply` - Reply to a message
+- `GET /api/conversations/{uuid}/messages/{messageId}/thread` - Get all messages in a thread
+
+#### Real-time Thread Updates
+
+When broadcasting is enabled, new replies in a thread are broadcast as regular messages with a parent_id field:
+
+```javascript
+Echo.private(`conversation.${conversationId}`)
+    .listen('.message.sent', (e) => {
+        if (e.parent_id) {
+            console.log(`New reply to message ${e.parent_id}: ${e.content}`);
+            // Update UI to show the new reply in the thread
+            addReplyToThread(e.parent_id, e);
+        }
+    });
+```
+
 ### Helper Functions
 
 The package also provides helper functions for easier usage:
