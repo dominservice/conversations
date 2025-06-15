@@ -29,6 +29,10 @@ Route::group(['prefix' => $prefix, 'middleware' => $middleware], function () {
     Route::get('/{uuid}/messages/{messageId}/read-by', [MessagesController::class, 'readBy']);
     Route::get('/{uuid}/read-by', [MessagesController::class, 'conversationReadBy']);
 
+    // Thread routes
+    Route::get('/{uuid}/messages/{messageId}/thread', [MessagesController::class, 'thread']);
+    Route::post('/{uuid}/messages/{messageId}/reply', [MessagesController::class, 'reply']);
+
     // Reactions routes
     Route::get('/{uuid}/messages/{messageId}/reactions', [MessagesController::class, 'reactions']);
     Route::post('/{uuid}/messages/{messageId}/reactions', [MessagesController::class, 'addReaction']);

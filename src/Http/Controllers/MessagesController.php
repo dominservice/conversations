@@ -64,6 +64,7 @@ class MessagesController extends Controller
             'content' => 'nullable|string',
             'attachments' => 'nullable|array',
             'attachments.*' => 'nullable|file|max:' . config('conversations.attachments.max_size.default', 10240),
+            'parent_id' => 'nullable|integer|exists:' . config('conversations.tables.conversation_messages') . ',id',
         ]);
 
         // Either content or attachments must be present
@@ -91,12 +92,13 @@ class MessagesController extends Controller
 
         $content = $request->input('content', '');
         $attachments = $request->file('attachments', []);
+        $parentId = $request->input('parent_id');
 
         // Use addMessageWithAttachments if attachments are present
         if (!empty($attachments)) {
-            $message = app('conversations')->addMessageWithAttachments($uuid, $content, $attachments, false, true);
+            $message = app('conversations')->addMessageWithAttachments($uuid, $content, $attachments, false, true, $parentId);
         } else {
-            $message = app('conversations')->addMessage($uuid, $content, false, true);
+            $message = app('conversations')->addMessage($uuid, $content, false, true, [], $parentId);
         }
 
         if (!$message) {
@@ -399,6 +401,136 @@ class MessagesController extends Controller
         return response()->json([
             'data' => $messages,
         ]);
+    }
+
+    /**
+     * Get all messages in a thread.
+     *
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @return \Illuminate\Http\Response
+     */
+    public function thread($uuid, $messageId)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        // Check if the message exists and belongs to this conversation
+        $message = \Dominservice\Conversations\Models\Eloquent\ConversationMessage::where('id', $messageId)
+            ->where('conversation_uuid', $uuid)
+            ->first();
+
+        if (!$message) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.not_found'),
+            ], 404);
+        }
+
+        // Get all messages in the thread
+        $threadMessages = $message->getThreadMessages();
+
+        // Load additional relationships for each message
+        $threadMessages->each(function ($message) {
+            $message->load(['sender', 'attachments']);
+        });
+
+        return response()->json([
+            'data' => [
+                'thread_root_id' => $message->getThreadRoot()->id,
+                'messages' => $threadMessages,
+            ],
+        ]);
+    }
+
+    /**
+     * Reply to a specific message in a conversation.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @return \Illuminate\Http\Response
+     */
+    public function reply(Request $request, $uuid, $messageId)
+    {
+        $request->validate([
+            'content' => 'nullable|string',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'nullable|file|max:' . config('conversations.attachments.max_size.default', 10240),
+        ]);
+
+        // Either content or attachments must be present
+        if (empty($request->input('content')) && !$request->hasFile('attachments')) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.content_or_attachment_required'),
+            ], 422);
+        }
+
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        // Check if the message exists and belongs to this conversation
+        $parentMessage = \Dominservice\Conversations\Models\Eloquent\ConversationMessage::where('id', $messageId)
+            ->where('conversation_uuid', $uuid)
+            ->first();
+
+        if (!$parentMessage) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.not_found'),
+            ], 404);
+        }
+
+        $content = $request->input('content', '');
+        $attachments = $request->file('attachments', []);
+
+        // Use replyToMessage method
+        if (!empty($attachments)) {
+            // For attachments, we need to use addMessageWithAttachments with parent_id
+            $message = app('conversations')->addMessageWithAttachments($uuid, $content, $attachments, false, true, $messageId);
+        } else {
+            $message = app('conversations')->replyToMessage($messageId, $content, true);
+        }
+
+        if (!$message) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.create_failed'),
+            ], 422);
+        }
+
+        // Load attachments if present
+        if ($message->hasAttachments()) {
+            $message->load('attachments');
+        }
+
+        return response()->json([
+            'data' => $message,
+            'message' => trans('conversations::conversations.message.reply_sent'),
+        ], 201);
     }
 
     /**

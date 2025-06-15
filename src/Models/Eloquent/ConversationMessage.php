@@ -125,6 +125,96 @@ class ConversationMessage extends Model
     }
 
     /**
+     * Get the parent message of this message (if it's a reply).
+     */
+    public function parent()
+    {
+        return $this->belongsTo(ConversationMessage::class, 'parent_id');
+    }
+
+    /**
+     * Get all replies to this message.
+     */
+    public function replies()
+    {
+        return $this->hasMany(ConversationMessage::class, 'parent_id');
+    }
+
+    /**
+     * Check if this message is a reply to another message.
+     *
+     * @return bool
+     */
+    public function isReply()
+    {
+        return !is_null($this->parent_id);
+    }
+
+    /**
+     * Check if this message has any replies.
+     *
+     * @return bool
+     */
+    public function hasReplies()
+    {
+        return $this->replies()->count() > 0;
+    }
+
+    /**
+     * Get the thread root message (the topmost parent in the thread).
+     *
+     * @return \Dominservice\Conversations\Models\Eloquent\ConversationMessage
+     */
+    public function getThreadRoot()
+    {
+        if (!$this->isReply()) {
+            return $this;
+        }
+
+        $parent = $this->parent;
+        while ($parent->isReply()) {
+            $parent = $parent->parent;
+        }
+
+        return $parent;
+    }
+
+    /**
+     * Get all messages in the same thread.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function getThreadMessages()
+    {
+        $root = $this->getThreadRoot();
+
+        // Start with the root message
+        $messages = collect([$root]);
+
+        // Add all replies recursively
+        $this->addRepliesToCollection($root, $messages);
+
+        return $messages->sortBy('created_at');
+    }
+
+    /**
+     * Helper method to recursively add replies to a collection.
+     *
+     * @param \Dominservice\Conversations\Models\Eloquent\ConversationMessage $message
+     * @param \Illuminate\Support\Collection $collection
+     * @return void
+     */
+    protected function addRepliesToCollection($message, &$collection)
+    {
+        $replies = $message->replies;
+
+        foreach ($replies as $reply) {
+            $collection->push($reply);
+            $this->addRepliesToCollection($reply, $collection);
+        }
+    }
+
+    /**
      * Get reactions grouped by emoji with count.
      *
      * @return \Illuminate\Support\Collection

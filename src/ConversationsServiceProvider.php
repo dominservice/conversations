@@ -52,6 +52,7 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__.'/../database/migrations/column_add_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_relations_table'),
             __DIR__.'/../database/migrations/add_attachment_support_to_conversation_messages_table.php.stub' => $this->getMigrationFileName($filesystem, 'add_attachment_support_to_conversation_messages_table'),
             __DIR__.'/../database/migrations/create_conversation_type_translations_table.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversation_type_translations_table'),
+            __DIR__.'/../database/migrations/add_thread_support_to_conversation_messages_table.php.stub' => $this->getMigrationFileName($filesystem, 'add_thread_support_to_conversation_messages_table'),
         ], 'migrations');
 
         // Publish translations

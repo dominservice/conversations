@@ -126,9 +126,10 @@ class Conversations
      * @param false $addUser
      * @param false $getObject
      * @param array $attachments
+     * @param int|null $parentId
      * @return ConversationMessage|false|int
      */
-    public function addMessage($convUuid, $content, $addUser = false, $getObject = false, $attachments = [])
+    public function addMessage($convUuid, $content, $addUser = false, $getObject = false, $attachments = [], $parentId = null)
     {
         // Execute before_add_message hooks
         $hookResult = app('Dominservice\Conversations\Hooks\HookManager')->execute('before_add_message', [
@@ -136,6 +137,7 @@ class Conversations
             'content' => $content,
             'add_user' => $addUser,
             'attachments' => $attachments,
+            'parent_id' => $parentId,
         ]);
 
         // If a hook returns false, abort the operation
@@ -165,6 +167,11 @@ class Conversations
             $message->{get_sender_key()} = $userId;
             $message->conversation_uuid = $conversation->uuid;
             $message->content = $content;
+
+            // Set parent_id if this is a reply
+            if (!is_null($parentId)) {
+                $message->parent_id = $parentId;
+            }
 
             // Set message type based on whether attachments are present
             $message->message_type = !empty($attachments) ? ConversationMessage::TYPE_ATTACHMENT : ConversationMessage::TYPE_TEXT;
@@ -207,6 +214,7 @@ class Conversations
                 'user_id' => $userId,
                 'content' => $content,
                 'attachments' => $attachments,
+                'parent_id' => $parentId,
             ]);
 
             if ($getObject) {
@@ -244,11 +252,37 @@ class Conversations
      * @param array $attachments
      * @param bool $addUser
      * @param bool $getObject
+     * @param int|null $parentId
      * @return ConversationMessage|false|int
      */
-    public function addMessageWithAttachments($convUuid, $content, array $attachments, $addUser = false, $getObject = false)
+    public function addMessageWithAttachments($convUuid, $content, array $attachments, $addUser = false, $getObject = false, $parentId = null)
     {
-        return $this->addMessage($convUuid, $content, $addUser, $getObject, $attachments);
+        return $this->addMessage($convUuid, $content, $addUser, $getObject, $attachments, $parentId);
+    }
+
+    /**
+     * Reply to a message in a conversation.
+     *
+     * @param int $parentMessageId The ID of the message being replied to
+     * @param string $content The content of the reply
+     * @param bool $getObject Whether to return the message object
+     * @param array $attachments Optional attachments for the reply
+     * @return ConversationMessage|false|int
+     */
+    public function replyToMessage($parentMessageId, $content, $getObject = false, $attachments = [])
+    {
+        // Get the parent message
+        $parentMessage = ConversationMessage::find($parentMessageId);
+
+        if (!$parentMessage) {
+            return false;
+        }
+
+        // Get the conversation UUID from the parent message
+        $conversationUuid = $parentMessage->conversation_uuid;
+
+        // Add the reply message with the parent_id set
+        return $this->addMessage($conversationUuid, $content, false, $getObject, $attachments, $parentMessageId);
     }
 
     /**
