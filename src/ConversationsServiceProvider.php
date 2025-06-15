@@ -186,8 +186,9 @@ class ConversationsServiceProvider extends ServiceProvider
         if (!class_exists('Intervention\Image\Facades\Image')) {
             // We can't install packages programmatically, but we can show a warning
             if (PHP_SAPI === 'cli') {
-                $this->warn('The Intervention/Image package is required for image optimization.');
-                $this->warn('Please install it using: composer require intervention/image');
+                // Use standard output for CLI since we don't have access to the components property
+                echo "\033[33mWARNING: The Intervention/Image package is required for image optimization.\033[0m\n";
+                echo "\033[33mWARNING: Please install it using: composer require intervention/image\033[0m\n";
             } else {
                 // Log a warning
                 \Log::warning('The Intervention/Image package is required for image optimization in the Conversations package.');
