@@ -292,6 +292,122 @@ class MessagesController extends Controller
     }
 
     /**
+     * Edit a message.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $uuid, $messageId)
+    {
+        $request->validate([
+            'content' => 'required|string',
+        ]);
+
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        // Check if message exists and belongs to this conversation
+        $message = \Dominservice\Conversations\Models\Eloquent\ConversationMessage::where('id', $messageId)
+            ->where('conversation_uuid', $uuid)
+            ->first();
+
+        if (!$message) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.not_found'),
+            ], 404);
+        }
+
+        // Check if message is editable
+        if (!app('conversations')->isMessageEditable($messageId, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.not_editable'),
+            ], 403);
+        }
+
+        // Edit the message
+        $content = $request->input('content');
+        $updatedMessage = app('conversations')->editMessage($messageId, $content, $userId);
+
+        if (!$updatedMessage) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.edit_failed'),
+            ], 422);
+        }
+
+        return response()->json([
+            'data' => $updatedMessage,
+            'message' => trans('conversations::conversations.message.edited'),
+        ]);
+    }
+
+    /**
+     * Check if a message is editable.
+     *
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @return \Illuminate\Http\Response
+     */
+    public function checkEditable($uuid, $messageId)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        // Check if message exists and belongs to this conversation
+        $message = \Dominservice\Conversations\Models\Eloquent\ConversationMessage::where('id', $messageId)
+            ->where('conversation_uuid', $uuid)
+            ->first();
+
+        if (!$message) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.not_found'),
+            ], 404);
+        }
+
+        $isEditable = app('conversations')->isMessageEditable($messageId, $userId);
+        $timeLimit = config('conversations.message_editing.time_limit');
+        $editableUntil = $timeLimit ? $message->created_at->addMinutes($timeLimit) : null;
+
+        return response()->json([
+            'data' => [
+                'is_editable' => $isEditable,
+                'editable_flag' => $message->editable,
+                'time_limit' => $timeLimit,
+                'editable_until' => $editableUntil ? $editableUntil->toIso8601String() : null,
+                'has_been_edited' => $message->hasBeenEdited(),
+                'edited_at' => $message->edited_at ? $message->edited_at->toIso8601String() : null,
+            ],
+        ]);
+    }
+
+    /**
      * Broadcast that the user is typing.
      *
      * @param  \Illuminate\Http\Request  $request

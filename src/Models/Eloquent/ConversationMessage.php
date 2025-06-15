@@ -29,7 +29,7 @@ class ConversationMessage extends Model
     const TYPE_ATTACHMENT = 'attachment';
 
     protected $dates = [
-        'cteated_at', 'updated_at'
+        'created_at', 'updated_at', 'edited_at'
     ];
 
     /**
@@ -39,6 +39,8 @@ class ConversationMessage extends Model
      */
     protected $casts = [
         'message_type' => 'string',
+        'editable' => 'boolean',
+        'edited_at' => 'datetime',
     ];
     /**
      * Get the table associated with the model.
@@ -158,6 +160,47 @@ class ConversationMessage extends Model
     public function hasReplies()
     {
         return $this->replies()->count() > 0;
+    }
+
+    /**
+     * Check if this message is editable.
+     *
+     * @param mixed|null $userId The user ID trying to edit the message (defaults to authenticated user)
+     * @return bool
+     */
+    public function isEditable($userId = null)
+    {
+        // If message is explicitly marked as not editable
+        if (!$this->editable) {
+            return false;
+        }
+
+        // Check if the user is the sender of the message
+        $userId = $userId ?? auth()->id();
+        if ($this->{get_sender_key()} != $userId) {
+            return false;
+        }
+
+        // Check if the message is within the time limit for editing
+        $timeLimit = config('conversations.message_editing.time_limit');
+        if ($timeLimit !== null) {
+            $editableUntil = $this->created_at->addMinutes($timeLimit);
+            if (now()->gt($editableUntil)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if this message has been edited.
+     *
+     * @return bool
+     */
+    public function hasBeenEdited()
+    {
+        return $this->edited_at !== null;
     }
 
     /**

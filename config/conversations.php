@@ -194,6 +194,29 @@ return array(
 
     /*
     |--------------------------------------------------------------------------
+    | Message Editing Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Here you can configure the message editing settings.
+    | You can enable/disable editing and set a time limit for editing messages.
+    |
+    */
+    'message_editing' => [
+        // Enable or disable message editing
+        'enabled' => env('CONVERSATIONS_MESSAGE_EDITING_ENABLED', true),
+
+        // Time limit in minutes for editing messages (null for no limit)
+        'time_limit' => env('CONVERSATIONS_MESSAGE_EDITING_TIME_LIMIT', 15),
+
+        // Whether to mark messages as edited
+        'mark_as_edited' => true,
+
+        // Whether to broadcast edit events
+        'broadcast_edits' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Broadcasting Configuration
     |--------------------------------------------------------------------------
     |
@@ -215,6 +238,7 @@ return array(
             'message_sent' => true,
             'message_read' => true,
             'message_deleted' => true,
+            'message_edited' => true,
             'conversation_created' => true,
             'user_typing' => true,
         ],

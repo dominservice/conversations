@@ -854,6 +854,107 @@ class Conversations
     }
 
     /**
+     * Edit a message in a conversation.
+     *
+     * @param int $messageId The ID of the message to edit
+     * @param string $newContent The new content for the message
+     * @param mixed|null $userId The ID of the user editing the message (defaults to authenticated user)
+     * @return bool|ConversationMessage Returns the updated message on success, false on failure
+     */
+    public function editMessage(int $messageId, string $newContent, $userId = null)
+    {
+        // Get the user ID if not provided
+        $userId = $userId ?? \Auth::user()->{\Auth::user()->getKeyName()};
+
+        // Get the message
+        $message = ConversationMessage::find($messageId);
+
+        // Check if the message exists
+        if (!$message) {
+            return false;
+        }
+
+        // Check if the message is editable
+        if (!$message->isEditable($userId)) {
+            return false;
+        }
+
+        // Execute before_edit_message hooks
+        $hookResult = app('Dominservice\Conversations\Hooks\HookManager')->execute('before_edit_message', [
+            'message_id' => $messageId,
+            'old_content' => $message->content,
+            'new_content' => $newContent,
+            'user_id' => $userId,
+        ]);
+
+        // If a hook returns false, abort the operation
+        if ($hookResult === false) {
+            return false;
+        }
+
+        // Update the message
+        $message->content = $newContent;
+        $message->edited_at = now();
+        $message->save();
+
+        // Broadcast the message edited event if enabled
+        if ($this->broadcastManager && $this->broadcastManager->enabled() && 
+            config('conversations.message_editing.broadcast_edits', true)) {
+            $this->broadcastManager->broadcast(new Events\MessageEdited($message, $userId));
+        }
+
+        // Execute after_edit_message hooks
+        app('Dominservice\Conversations\Hooks\HookManager')->execute('after_edit_message', [
+            'message' => $message,
+            'user_id' => $userId,
+            'old_content' => $hookResult['old_content'] ?? null,
+        ]);
+
+        return $message;
+    }
+
+    /**
+     * Check if a message is editable by a user.
+     *
+     * @param int $messageId The ID of the message to check
+     * @param mixed|null $userId The ID of the user (defaults to authenticated user)
+     * @return bool True if the message is editable, false otherwise
+     */
+    public function isMessageEditable(int $messageId, $userId = null): bool
+    {
+        // Get the user ID if not provided
+        $userId = $userId ?? \Auth::user()->{\Auth::user()->getKeyName()};
+
+        // Get the message
+        $message = ConversationMessage::find($messageId);
+
+        // Check if the message exists and is editable
+        return $message && $message->isEditable($userId);
+    }
+
+    /**
+     * Set whether a message is editable.
+     *
+     * @param int $messageId The ID of the message
+     * @param bool $editable Whether the message should be editable
+     * @return bool True on success, false on failure
+     */
+    public function setMessageEditable(int $messageId, bool $editable): bool
+    {
+        // Get the message
+        $message = ConversationMessage::find($messageId);
+
+        // Check if the message exists
+        if (!$message) {
+            return false;
+        }
+
+        // Update the editable flag
+        $message->editable = $editable;
+        return $message->save();
+    }
+
+    /**
      * Get all users who have read a specific message.
      *
      * @param  int  $messageId
