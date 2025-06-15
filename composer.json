@@ -43,5 +43,15 @@
             "Dominservice\\Conversations\\Tests\\": "tests/"
         }
     },
-    "minimum-stability": "dev"
+    "minimum-stability": "dev",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Dominservice\\Conversations\\ConversationsServiceProvider"
+            ],
+            "aliases": {
+                "Conversations": "Dominservice\\Conversations\\Facade\\Conversations"
+            }
+        }
+    }
 }

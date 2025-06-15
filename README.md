@@ -43,6 +43,25 @@ composer require dominservice/conversations
 php artisan vendor:publish --provider="Dominservice\Conversations\ConversationsServiceProvider"
 ```
 
+This will publish all assets including config, migrations, translations, and routes. If you want to publish specific assets, you can use one of the following tags:
+
+```bash
+# Publish only configuration
+php artisan vendor:publish --tag=conversations-config
+
+# Publish only migrations
+php artisan vendor:publish --tag=conversations-migrations
+
+# Publish only translations
+php artisan vendor:publish --tag=conversations-translations
+
+# Publish only routes
+php artisan vendor:publish --tag=conversations-routes
+
+# Publish all assets
+php artisan vendor:publish --tag=conversations
+```
+
 ### 3. Run Migrations
 
 ```bash
@@ -64,6 +83,8 @@ For Laravel 5.5 and above, the package will be auto-discovered. For older versio
     'Conversations' => Dominservice\Conversations\Facade\Conversations::class,
 ]
 ```
+
+> **Note:** If you're experiencing issues with the package not appearing in the vendor:publish list, make sure your application has properly registered the service provider. You can manually register it in your `config/app.php` file even if you're using Laravel 5.5+ to ensure it's loaded correctly.
 
 ## Quick Start
 
@@ -481,4 +502,3 @@ This package is open-sourced software licensed under the [MIT license](LICENSE).
 
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/dominservice)
-

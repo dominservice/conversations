@@ -40,7 +40,7 @@ class ConversationsServiceProvider extends ServiceProvider
         // Publish config
         $this->publishes([
             __DIR__ . '/../config/conversations.php' => config_path('conversations.php'),
-        ], 'conversations.config');
+        ], 'conversations-config');
 
         // Publish migrations
         $this->publishes([
@@ -51,7 +51,7 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__.'/../database/migrations/column_add_conversation_message_statuses_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_message_statuses_table'),
             __DIR__.'/../database/migrations/column_add_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_relations_table'),
             __DIR__.'/../database/migrations/update_to_version_3.php.stub' => $this->getMigrationFileName($filesystem, 'update_to_version_3'),
-        ], 'conversations.migrations');
+        ], 'conversations-migrations');
 
         // Publish translations
         $targetLangPath = function_exists('lang_path')
@@ -61,13 +61,27 @@ class ConversationsServiceProvider extends ServiceProvider
                 : resource_path('lang/vendor/conversations'));
         $this->publishes([
             __DIR__ . '/..//lang' => $targetLangPath,
-        ], 'conversations.translations');
+        ], 'conversations-translations');
 
 
         // Publish routes
         $this->publishes([
             __DIR__ . '/Http/routes.php' => base_path('routes/conversation-api.php'),
-        ], 'conversations.routes');
+        ], 'conversations-routes');
+
+        // Publish all assets with a single tag
+        $this->publishes([
+            __DIR__ . '/../config/conversations.php' => config_path('conversations.php'),
+            __DIR__.'/../database/migrations/create_conversations_tables.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversations_tables'),
+            __DIR__.'/../database/migrations/create_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversation_relations_table'),
+            __DIR__.'/../database/migrations/create_conversation_types_table.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversation_types_table'),
+            __DIR__.'/../database/migrations/column_add_conversation_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_table'),
+            __DIR__.'/../database/migrations/column_add_conversation_message_statuses_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_message_statuses_table'),
+            __DIR__.'/../database/migrations/column_add_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_relations_table'),
+            __DIR__.'/../database/migrations/update_to_version_3.php.stub' => $this->getMigrationFileName($filesystem, 'update_to_version_3'),
+            __DIR__ . '/../lang' => $targetLangPath,
+            __DIR__ . '/Http/routes.php' => base_path('routes/conversation-api.php'),
+        ], 'conversations');
 
         // Load translations
         $this->loadTranslationsFrom(__DIR__ . '/../lang', 'conversations');

@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced README with more comprehensive installation and usage instructions
 
 ### Fixed
+- Fixed vendor:publish command to properly publish all assets when no tag is specified
+- Fixed issue with package not appearing in vendor:publish list
+- Added Laravel package discovery support to ensure proper registration
 - Various bug fixes and performance improvements
 
 ## [2.0.0] - 2023-01-01
