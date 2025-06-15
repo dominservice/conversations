@@ -63,9 +63,14 @@ class ConversationsServiceProvider extends ServiceProvider
             'conversations'
         );
 
+        // Register the BroadcastManager as a singleton
+        $this->app->singleton('conversations.broadcasting', function ($app) {
+            return new Broadcasting\BroadcastManager($app, $app->make(\Illuminate\Broadcasting\BroadcastManager::class));
+        });
+
         // Register the Conversations class as a singleton
         $this->app->singleton('conversations', function ($app) {
-            return new Conversations();
+            return new Conversations($app->make('conversations.broadcasting'));
         });
 	}
 

@@ -16,6 +16,12 @@
         "php": ">=8.0",
         "laravel/framework": "^9|^10|^11|^12"
     },
+    "suggest": {
+        "pusher/pusher-php-server": "Required to use the Pusher broadcast driver (^7.0).",
+        "beyondcode/laravel-websockets": "Required to use the Laravel WebSockets broadcast driver (^1.13).",
+        "kreait/firebase-php": "Required to use the Firebase broadcast driver (^6.0).",
+        "php-mqtt/client": "Required to use the MQTT broadcast driver (^1.0)."
+    },
     "require-dev": {
         "phpunit/phpunit": "^9.0|^10.0",
         "orchestra/testbench": "^7.0|^8.0",

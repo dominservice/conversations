@@ -21,6 +21,12 @@ use Dominservice\Conversations\Models\Eloquent\ConversationRelation;
 use Dominservice\Conversations\Models\Eloquent\ConversationUser;
 use Dominservice\Conversations\Models\Eloquent\ConversationMessage;
 use Dominservice\Conversations\Models\Eloquent\ConversationMessageStatus;
+use Dominservice\Conversations\Broadcasting\BroadcastManager;
+use Dominservice\Conversations\Events\ConversationCreated;
+use Dominservice\Conversations\Events\MessageSent;
+use Dominservice\Conversations\Events\MessageRead;
+use Dominservice\Conversations\Events\MessageDeleted;
+use Dominservice\Conversations\Events\UserTyping;
 use Illuminate\Support\Str;
 
 /**
@@ -38,11 +44,21 @@ class Conversations
     protected $messagesStatusTable;
 
     /**
-     * Conversations constructor.
+     * The broadcast manager instance.
+     *
+     * @var \Dominservice\Conversations\Broadcasting\BroadcastManager
      */
-    public function __construct() {
+    protected $broadcastManager;
+
+    /**
+     * Conversations constructor.
+     * 
+     * @param \Dominservice\Conversations\Broadcasting\BroadcastManager|null $broadcastManager
+     */
+    public function __construct(BroadcastManager $broadcastManager = null) {
         $this->messagesTable = DB::getTablePrefix() . (new ConversationMessage())->getTable();
         $this->messagesStatusTable = DB::getTablePrefix() . (new ConversationMessageStatus())->getTable();
+        $this->broadcastManager = $broadcastManager;
     }
 
     /**
@@ -63,6 +79,11 @@ class Conversations
             $conversation->save();
             $this->setRelations($conversation, $relationType, $relationId);
             $this->setUsers($conversation, $users);
+
+            // Broadcast the conversation created event
+            if ($this->broadcastManager && $this->broadcastManager->enabled()) {
+                $this->broadcastManager->broadcast(new ConversationCreated($conversation, $users));
+            }
 
             if (!empty($content)) {
                 $this->addMessage($conversation->uuid, $content);
@@ -127,6 +148,11 @@ class Conversations
             }
 
             \DB::table((new ConversationMessageStatus)->getTable())->insert($dataMessageStatuses);
+
+            // Broadcast the message sent event
+            if ($this->broadcastManager && $this->broadcastManager->enabled()) {
+                $this->broadcastManager->broadcast(new MessageSent($message));
+            }
 
             if ($getObject) {
                 return $message;
@@ -426,6 +452,11 @@ class Conversations
     public function markAsRead($convUuid, $msgId, $userId): void
     {
         $this->markAs($convUuid, $msgId, $userId, self::READ);
+
+        // Broadcast the message read event
+        if ($this->broadcastManager && $this->broadcastManager->enabled()) {
+            $this->broadcastManager->broadcast(new MessageRead($convUuid, $msgId, $userId));
+        }
     }
 
     /**
@@ -446,6 +477,11 @@ class Conversations
     public function markAsDeleted($convUuid, $msgId, $userId): void
     {
         $this->markAs($convUuid, $msgId, $userId, self::DELETED);
+
+        // Broadcast the message deleted event
+        if ($this->broadcastManager && $this->broadcastManager->enabled()) {
+            $this->broadcastManager->broadcast(new MessageDeleted($convUuid, $msgId, $userId));
+        }
     }
 
     /**
@@ -619,5 +655,21 @@ class Conversations
         }
 
         return $users;
+    }
+
+    /**
+     * Broadcast that a user is typing in a conversation.
+     *
+     * @param  string  $conversationUuid
+     * @param  mixed  $userId
+     * @param  string|null  $userName
+     * @return void
+     */
+    public function broadcastUserTyping(string $conversationUuid, $userId = null, ?string $userName = null): void
+    {
+        if ($this->broadcastManager && $this->broadcastManager->enabled()) {
+            $userId = $userId ?? \Auth::user()->{\Auth::user()->getKeyName()};
+            $this->broadcastManager->broadcast(new UserTyping($conversationUuid, $userId, $userName));
+        }
     }
 }
