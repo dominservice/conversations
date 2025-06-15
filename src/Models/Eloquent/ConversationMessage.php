@@ -31,6 +31,15 @@ class ConversationMessage extends Model
     protected $dates = [
         'cteated_at', 'updated_at'
     ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'message_type' => 'string',
+    ];
     /**
      * Get the table associated with the model.
      *
@@ -67,5 +76,33 @@ class ConversationMessage extends Model
             }
         }
         return null;
+    }
+
+    /**
+     * Get the attachments for the message.
+     */
+    public function attachments()
+    {
+        return $this->hasMany(ConversationAttachment::class, 'message_id');
+    }
+
+    /**
+     * Check if the message has attachments.
+     *
+     * @return bool
+     */
+    public function hasAttachments()
+    {
+        return $this->message_type === self::TYPE_ATTACHMENT && $this->attachments()->count() > 0;
+    }
+
+    /**
+     * Get the first attachment of the message.
+     *
+     * @return \Dominservice\Conversations\Models\Eloquent\ConversationAttachment|null
+     */
+    public function getFirstAttachment()
+    {
+        return $this->attachments()->first();
     }
 }

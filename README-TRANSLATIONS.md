@@ -1,6 +1,6 @@
 # Conversations Translations
 
-This package includes a translation system that allows you to customize all messages in different languages.
+This package includes a translation system that allows you to customize all messages in different languages. It also supports model translations using the [astrotomic/laravel-translatable](https://github.com/Astrotomic/laravel-translatable) package.
 
 ## Available Translations
 
@@ -72,3 +72,44 @@ $message = Lang::get('conversations::conversations.conversation.not_found');
 ```
 
 The `conversations::` prefix is required to access the package's translations.
+
+## Model Translations
+
+The package uses the [astrotomic/laravel-translatable](https://github.com/Astrotomic/laravel-translatable) package to provide model translations. Currently, the following models support translations:
+
+- `ConversationType` - Translatable fields: `name`
+
+### Using Translatable Models
+
+You can use the translatable models just like any other model, but with the added ability to access and set translations:
+
+```php
+// Get a conversation type
+$type = ConversationType::find(1);
+
+// Get the name in the current locale
+$name = $type->name;
+
+// Get the name in a specific locale
+$name = $type->getTranslation('name', 'fr');
+
+// Set the name for the current locale
+$type->name = 'Group Chat';
+$type->save();
+
+// Set the name for a specific locale
+$type->translateOrNew('fr')->name = 'Chat de groupe';
+$type->save();
+
+// Create a new conversation type with translations
+$type = new ConversationType();
+$type->color = '#FF0000';
+$type->custom = true;
+$type->fill([
+    'en' => ['name' => 'Team Chat'],
+    'fr' => ['name' => 'Chat d\'équipe'],
+]);
+$type->save();
+```
+
+For more information on how to use the translatable models, please refer to the [astrotomic/laravel-translatable documentation](https://docs.astrotomic.info/laravel-translatable/).

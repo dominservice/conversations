@@ -125,15 +125,17 @@ class Conversations
      * @param $content
      * @param false $addUser
      * @param false $getObject
+     * @param array $attachments
      * @return ConversationMessage|false|int
      */
-    public function addMessage($convUuid, $content, $addUser = false, $getObject = false)
+    public function addMessage($convUuid, $content, $addUser = false, $getObject = false, $attachments = [])
     {
         // Execute before_add_message hooks
         $hookResult = app('Dominservice\Conversations\Hooks\HookManager')->execute('before_add_message', [
             'conversation_uuid' => $convUuid,
             'content' => $content,
             'add_user' => $addUser,
+            'attachments' => $attachments,
         ]);
 
         // If a hook returns false, abort the operation
@@ -142,7 +144,7 @@ class Conversations
         }
 
         if (!empty($convUuid)
-            && !empty($content)
+            && ((!empty($content) || !empty($attachments)))
             && (($convUuid instanceof Conversation && $conversation = $convUuid)
                 || (is_string($convUuid) && $conversation = $this->get($convUuid)))
         ) {
@@ -163,7 +165,16 @@ class Conversations
             $message->{get_sender_key()} = $userId;
             $message->conversation_uuid = $conversation->uuid;
             $message->content = $content;
+
+            // Set message type based on whether attachments are present
+            $message->message_type = !empty($attachments) ? ConversationMessage::TYPE_ATTACHMENT : ConversationMessage::TYPE_TEXT;
+
             $message->save();
+
+            // Process attachments if any
+            if (!empty($attachments)) {
+                $this->processAttachments($message, $attachments);
+            }
 
             //get all users in conversation
             $usersInConv = $conversation->users ?? [];
@@ -195,6 +206,7 @@ class Conversations
                 'conversation' => $conversation,
                 'user_id' => $userId,
                 'content' => $content,
+                'attachments' => $attachments,
             ]);
 
             if ($getObject) {
@@ -204,6 +216,39 @@ class Conversations
         }
 
         return false;
+    }
+
+    /**
+     * Process and store attachments for a message.
+     *
+     * @param ConversationMessage $message
+     * @param array $attachments
+     * @return void
+     */
+    protected function processAttachments(ConversationMessage $message, array $attachments)
+    {
+        $attachmentService = app('Dominservice\Conversations\Services\AttachmentService');
+
+        foreach ($attachments as $attachment) {
+            if ($attachment instanceof \Illuminate\Http\UploadedFile) {
+                $attachmentService->storeAttachment($attachment, $message->id);
+            }
+        }
+    }
+
+    /**
+     * Add a message with attachments to a conversation.
+     *
+     * @param string $convUuid
+     * @param string $content
+     * @param array $attachments
+     * @param bool $addUser
+     * @param bool $getObject
+     * @return ConversationMessage|false|int
+     */
+    public function addMessageWithAttachments($convUuid, $content, array $attachments, $addUser = false, $getObject = false)
+    {
+        return $this->addMessage($convUuid, $content, $addUser, $getObject, $attachments);
     }
 
     /**

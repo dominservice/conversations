@@ -11,11 +11,13 @@ A powerful, flexible, and feature-rich messaging system for Laravel applications
 - 💬 **Complete Messaging System** - Private and group conversations with full message history
 - ⚡ **Real-time Communication** - Built-in broadcasting support for instant messaging
 - 🔌 **Multiple Broadcasting Drivers** - Support for Pusher, Laravel WebSockets, Firebase, MQTT, and Socket.IO
+- 📎 **File Attachments** - Support for images, documents, audio, and video files with security features
+- 🖼️ **Image Optimization** - Automatic image resizing, format conversion, and thumbnail generation
 - 🌐 **RESTful API** - Ready-to-use API endpoints for web and mobile applications
 - 🪝 **Extensible Hook System** - Customize behavior without modifying core code
 - 🌍 **Multilingual Support** - Easily translate all messages to any language
 - 📱 **Mobile-Friendly** - Works seamlessly with mobile applications
-- 🔒 **Secure** - Built with security best practices
+- 🔒 **Secure** - Built with security best practices including virus scanning for attachments
 
 ## Compatibility
 
@@ -216,6 +218,36 @@ Conversations::markReadAll($conversationId, $userId);
 
 // Mark all messages in a conversation as unread
 Conversations::markUnreadAll($conversationId, $userId);
+```
+
+### Attachments
+
+The package supports file attachments with various security and optimization features:
+
+```php
+// Add a message with attachments
+$file = $request->file('attachment');
+$messageId = Conversations::addMessageWithAttachments($conversationId, 'Check out this file!', [$file]);
+
+// Get attachments for a message
+$message = ConversationMessage::with('attachments')->find($messageId);
+$attachments = $message->attachments;
+
+// Check if a message has attachments
+if ($message->hasAttachments()) {
+    $firstAttachment = $message->getFirstAttachment();
+    $attachmentUrl = $firstAttachment->getUrlAttribute();
+
+    // For images, get thumbnails
+    if ($firstAttachment->isImage()) {
+        $thumbnailUrl = $firstAttachment->getThumbnailUrl('small');
+    }
+
+    // Check if attachment requires a warning
+    if ($firstAttachment->requiresWarning()) {
+        // Show warning to user
+    }
+}
 ```
 
 ### Helper Functions

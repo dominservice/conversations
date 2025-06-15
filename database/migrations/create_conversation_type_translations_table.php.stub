@@ -1,0 +1,67 @@
+<?php
+
+/**
+ * Conversations
+ *
+ * This package will allow you to add a full user messaging system
+ * into your Laravel application.
+ *
+ * @package   Dominservice\Conversations
+ * @author    DSO-IT Mateusz Domin <biuro@dso.biz.pl>
+ * @copyright (c) 2021 DSO-IT Mateusz Domin
+ * @license   MIT
+ * @version   3.0.0
+ */
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        if (!Schema::hasTable('conversation_type_translations')) {
+            Schema::create('conversation_type_translations', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('conversation_type_id')
+                    ->references('id')
+                    ->on(config('conversations.tables.conversation_types'))
+                    ->onDelete('cascade');
+                $table->string('locale')->index();
+                $table->string('name');
+                
+                $table->unique(['conversation_type_id', 'locale']);
+            });
+
+            // Migrate existing data
+            if (Schema::hasTable(config('conversations.tables.conversation_types'))) {
+                $types = DB::table(config('conversations.tables.conversation_types'))->get();
+                $locale = config('app.locale', 'en');
+                
+                foreach ($types as $type) {
+                    DB::table('conversation_type_translations')->insert([
+                        'conversation_type_id' => $type->id,
+                        'locale' => $locale,
+                        'name' => $type->name,
+                    ]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::dropIfExists('conversation_type_translations');
+    }
+};

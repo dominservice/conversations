@@ -16,32 +16,26 @@
 namespace Dominservice\Conversations\Models\Eloquent;
 
 use Illuminate\Database\Eloquent\Model;
-use Astrotomic\Translatable\Contracts\Translatable as TranslatableContract;
-use Astrotomic\Translatable\Translatable;
 
 /**
- * Class ConversationType
+ * Class ConversationTypeTranslation
  * @package Dominservice\Conversations\Models\Eloquent
  */
-class ConversationType extends Model implements TranslatableContract
+class ConversationTypeTranslation extends Model
 {
-    use Translatable;
-
-    public $timestamps = false;
-
     /**
-     * The attributes that are translatable.
+     * Indicates if the model should be timestamped.
      *
-     * @var array
+     * @var bool
      */
-    public $translatedAttributes = ['name'];
+    public $timestamps = false;
 
     /**
      * The attributes that are mass assignable.
      *
      * @var array
      */
-    protected $fillable = ['color', 'custom'];
+    protected $fillable = ['name'];
 
     /**
      * Get the table associated with the model.
@@ -50,6 +44,6 @@ class ConversationType extends Model implements TranslatableContract
      */
     public function getTable()
     {
-        return config('conversations.tables.conversation_types');
+        return 'conversation_type_translations';
     }
 }

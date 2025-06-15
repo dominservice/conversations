@@ -61,8 +61,17 @@ class MessagesController extends Controller
     public function store(Request $request, $uuid)
     {
         $request->validate([
-            'content' => 'required|string',
+            'content' => 'nullable|string',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'nullable|file|max:' . config('conversations.attachments.max_size.default', 10240),
         ]);
+
+        // Either content or attachments must be present
+        if (empty($request->input('content')) && !$request->hasFile('attachments')) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.content_or_attachment_required'),
+            ], 422);
+        }
 
         $userId = Auth::id();
         $conversation = app('conversations')->get($uuid);
@@ -80,8 +89,15 @@ class MessagesController extends Controller
             ], 403);
         }
 
-        $content = $request->input('content');
-        $message = app('conversations')->addMessage($uuid, $content, false, true);
+        $content = $request->input('content', '');
+        $attachments = $request->file('attachments', []);
+
+        // Use addMessageWithAttachments if attachments are present
+        if (!empty($attachments)) {
+            $message = app('conversations')->addMessageWithAttachments($uuid, $content, $attachments, false, true);
+        } else {
+            $message = app('conversations')->addMessage($uuid, $content, false, true);
+        }
 
         if (!$message) {
             return response()->json([
@@ -89,10 +105,56 @@ class MessagesController extends Controller
             ], 422);
         }
 
+        // Load attachments if present
+        if ($message->hasAttachments()) {
+            $message->load('attachments');
+        }
+
         return response()->json([
             'data' => $message,
             'message' => trans('conversations::conversations.message.sent'),
         ], 201);
+    }
+
+    /**
+     * Get attachments for a message.
+     *
+     * @param  string  $uuid
+     * @param  int  $messageId
+     * @return \Illuminate\Http\Response
+     */
+    public function attachments($uuid, $messageId)
+    {
+        $userId = Auth::id();
+        $conversation = app('conversations')->get($uuid);
+
+        if (!$conversation) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.not_found'),
+            ], 404);
+        }
+
+        // Check if user is part of the conversation
+        if (!app('conversations')->existsUser($uuid, $userId)) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
+        $message = ConversationMessage::with('attachments')
+            ->where('id', $messageId)
+            ->where('conversation_uuid', $uuid)
+            ->first();
+
+        if (!$message) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.not_found'),
+            ], 404);
+        }
+
+        return response()->json([
+            'data' => $message->attachments,
+        ]);
     }
 
     /**

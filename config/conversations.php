@@ -25,6 +25,7 @@ return array(
         'conversation_messages' => 'conversation_messages',
         'conversation_message_statuses' => 'conversation_message_statuses',
         'conversation_types' => 'conversation_types',
+        'conversation_attachments' => 'conversation_attachments',
     ],
 
     /*
@@ -76,6 +77,118 @@ return array(
     */
     'hooks' => [
         // Register your hooks here
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Attachments Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Here you can configure the attachment settings for the conversations.
+    | You can enable/disable attachments, set file size limits, allowed types,
+    | image optimization settings, and security options.
+    |
+    */
+    'attachments' => [
+        // Enable or disable attachments
+        'enabled' => env('CONVERSATIONS_ATTACHMENTS_ENABLED', true),
+
+        // Storage disk to use for attachments (uses Laravel's filesystem configuration)
+        'disk' => env('CONVERSATIONS_ATTACHMENTS_DISK', 'public'),
+
+        // Path within the disk where attachments will be stored
+        'path' => env('CONVERSATIONS_ATTACHMENTS_PATH', 'conversations/attachments'),
+
+        // Maximum file size in kilobytes (KB)
+        'max_size' => [
+            'default' => 10240, // 10MB default limit
+            'image' => 5120,    // 5MB for images
+            'document' => 10240, // 10MB for documents
+            'audio' => 20480,   // 20MB for audio files
+            'video' => 51200,   // 50MB for video files
+        ],
+
+        // Allowed file extensions
+        'allowed_extensions' => [
+            'image' => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
+            'document' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'csv'],
+            'audio' => ['mp3', 'wav', 'ogg', 'm4a'],
+            'video' => ['mp4', 'mov', 'avi', 'wmv', 'webm'],
+        ],
+
+        // Explicitly blocked extensions (security risk files)
+        'blocked_extensions' => [
+            'exe', 'bat', 'cmd', 'sh', 'php', 'pl', 'py', 'js', 'jar', 'com',
+            'vbs', 'reg', 'msi', 'dll', 'bin', 'apk', 'app', 'dmg'
+        ],
+
+        // Image optimization settings
+        'image' => [
+            // Enable or disable image optimization
+            'optimize' => true,
+
+            // Maximum dimensions for images (width x height in pixels)
+            'max_dimensions' => [1920, 1080],
+
+            // Image quality (0-100) for JPEG and WebP
+            'quality' => 85,
+
+            // Convert all images to a specific format (null to keep original format)
+            // Options: 'jpg', 'png', 'webp', null
+            'convert_to' => 'webp',
+
+            // Generate thumbnails
+            'thumbnails' => [
+                'enabled' => true,
+                'dimensions' => [
+                    'small' => [320, 240],
+                    'medium' => [640, 480],
+                ],
+            ],
+        ],
+
+        // Security settings
+        'security' => [
+            // Show warning for potentially unsafe files
+            'show_warning' => true,
+
+            // File types that trigger a warning
+            'warning_types' => ['zip', 'rar', '7z', 'tar', 'gz'],
+
+            // Virus scanning
+            'virus_scan' => [
+                'enabled' => env('CONVERSATIONS_VIRUS_SCAN_ENABLED', false),
+
+                // Options: 'clamav', 'external'
+                'driver' => env('CONVERSATIONS_VIRUS_SCAN_DRIVER', 'clamav'),
+
+                // ClamAV settings
+                'clamav' => [
+                    'socket' => env('CONVERSATIONS_CLAMAV_SOCKET', '/var/run/clamav/clamd.ctl'),
+                ],
+
+                // External API settings (e.g., VirusTotal)
+                'external' => [
+                    'api_url' => env('CONVERSATIONS_VIRUS_SCAN_API_URL'),
+                    'api_key' => env('CONVERSATIONS_VIRUS_SCAN_API_KEY'),
+                ],
+            ],
+        ],
+
+        // Hooks for custom processing
+        'hooks' => [
+            // Before upload validation
+            'before_validate' => null,
+
+            // After validation, before storage
+            'before_store' => null,
+
+            // After storage
+            'after_store' => null,
+
+            // Before serving the file
+            'before_serve' => null,
+        ],
     ],
 
     /*

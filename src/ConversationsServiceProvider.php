@@ -50,6 +50,8 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__.'/../database/migrations/column_add_conversation_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_table'),
             __DIR__.'/../database/migrations/column_add_conversation_message_statuses_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_message_statuses_table'),
             __DIR__.'/../database/migrations/column_add_conversation_relations_table.php.stub' => $this->getMigrationFileName($filesystem, 'column_add_conversation_relations_table'),
+            __DIR__.'/../database/migrations/add_attachment_support_to_conversation_messages_table.php.stub' => $this->getMigrationFileName($filesystem, 'add_attachment_support_to_conversation_messages_table'),
+            __DIR__.'/../database/migrations/create_conversation_type_translations_table.php.stub' => $this->getMigrationFileName($filesystem, 'create_conversation_type_translations_table'),
         ], 'migrations');
 
         // Publish translations
@@ -93,10 +95,18 @@ class ConversationsServiceProvider extends ServiceProvider
             return new Conversations($app->make('conversations.broadcasting'));
         });
 
+        // Register the AttachmentService
+        $this->app->singleton('Dominservice\Conversations\Services\AttachmentService', function ($app) {
+            return new Services\AttachmentService();
+        });
+
         // Register API routes if enabled
         if (config('conversations.api.enabled', true)) {
             $this->registerRoutes();
         }
+
+        // Register required packages
+        $this->registerRequiredPackages();
 	}
 
     /**
@@ -144,6 +154,26 @@ class ConversationsServiceProvider extends ServiceProvider
                 return $filesystem->glob($path.'*'.$name.'.php');
             })->push($this->app->databasePath()."/migrations/{$timestamp}_{$name}.php")
             ->first();
+    }
+
+    /**
+     * Register required packages for attachment handling.
+     *
+     * @return void
+     */
+    protected function registerRequiredPackages()
+    {
+        // Check if Intervention/Image is installed
+        if (!class_exists('Intervention\Image\Facades\Image')) {
+            // We can't install packages programmatically, but we can show a warning
+            if (PHP_SAPI === 'cli') {
+                $this->warn('The Intervention/Image package is required for image optimization.');
+                $this->warn('Please install it using: composer require intervention/image');
+            } else {
+                // Log a warning
+                \Log::warning('The Intervention/Image package is required for image optimization in the Conversations package.');
+            }
+        }
     }
 
 }

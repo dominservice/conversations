@@ -33,7 +33,7 @@ class ApiTest extends TestCase
 
         // Enable API
         Config::set('conversations.api.enabled', true);
-        
+
         // Use web middleware for testing instead of api
         Config::set('conversations.api.middleware', ['web', 'auth']);
     }
@@ -204,5 +204,57 @@ class ApiTest extends TestCase
             ->assertJson([
                 'message' => 'Typing indicator sent'
             ]);
+    }
+
+    public function testAddMessageWithAttachment()
+    {
+        // Create a conversation first
+        $response = $this->actingAs($this->user)
+            ->post('/api/conversations', [
+                'users' => [$this->otherUser->id],
+                'content' => 'Hello, this is a test message',
+            ]);
+
+        $conversationUuid = $response->json('data.uuid');
+
+        // Create a fake file for testing
+        $file = \Illuminate\Http\UploadedFile::fake()->image('test-image.jpg', 100, 100);
+
+        // Add a message with an attachment
+        $messageResponse = $this->actingAs($this->user)
+            ->post("/api/conversations/{$conversationUuid}/messages", [
+                'content' => 'Check out this image!',
+                'attachments' => [$file],
+            ]);
+
+        $messageResponse->assertStatus(201)
+            ->assertJsonStructure([
+                'data' => ['id', 'conversation_uuid', 'content', 'message_type', 'attachments'],
+                'message'
+            ]);
+
+        // Verify the message type is 'attachment'
+        $this->assertEquals('attachment', $messageResponse->json('data.message_type'));
+
+        // Get the message ID
+        $messageId = $messageResponse->json('data.id');
+
+        // Get the attachments for the message
+        $attachmentsResponse = $this->actingAs($this->user)
+            ->get("/api/conversations/{$conversationUuid}/messages/{$messageId}/attachments");
+
+        $attachmentsResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => [
+                        'id', 'message_id', 'filename', 'original_filename', 
+                        'mime_type', 'extension', 'type', 'size', 'path', 
+                        'is_optimized', 'is_scanned', 'is_safe'
+                    ]
+                ]
+            ]);
+
+        // Verify the attachment type is 'image'
+        $this->assertEquals('image', $attachmentsResponse->json('data.0.type'));
     }
 }

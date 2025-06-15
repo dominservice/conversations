@@ -13,7 +13,7 @@ Route::group(['prefix' => $prefix, 'middleware' => $middleware], function () {
     Route::post('/', [ConversationsController::class, 'store']);
     Route::get('/{uuid}', [ConversationsController::class, 'show']);
     Route::delete('/{uuid}', [ConversationsController::class, 'destroy']);
-    
+
     // Messages routes
     Route::get('/{uuid}/messages', [MessagesController::class, 'index']);
     Route::post('/{uuid}/messages', [MessagesController::class, 'store']);
@@ -21,7 +21,10 @@ Route::group(['prefix' => $prefix, 'middleware' => $middleware], function () {
     Route::post('/{uuid}/messages/{messageId}/read', [MessagesController::class, 'markAsRead']);
     Route::post('/{uuid}/messages/{messageId}/unread', [MessagesController::class, 'markAsUnread']);
     Route::delete('/{uuid}/messages/{messageId}', [MessagesController::class, 'destroy']);
-    
+
+    // Attachments routes
+    Route::get('/{uuid}/messages/{messageId}/attachments', [MessagesController::class, 'attachments']);
+
     // Typing indicator
     Route::post('/{uuid}/typing', [MessagesController::class, 'typing']);
 });
