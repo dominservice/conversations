@@ -2,75 +2,127 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/dominservice/conversations.svg?style=flat-square)](https://packagist.org/packages/dominservice/conversations)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
 
-# Conversations
-This package will allow you to add a full user messaging system into your Laravel application.
+# Laravel Conversations - Complete Messaging System
 
-### Notice
-This package is for Laravel
+A powerful, flexible, and feature-rich messaging system for Laravel applications. Build real-time chat, messaging platforms, support systems, and communication tools with ease.
 
-| Version | Compatibility |
-|---------|---------------|
-| 1.*     | 5.6 -->  9.*  |
-| 2.*     | 8.* --> 10.*  |
+## Features
 
-### IMPORTANT
-This package is a continuation of the
-[dominservice/laravel_chat](https://github.com/dominservice/laravel_chat) package, due to significant structural changes I decided to create a separate repository.
-If you have a previous version, you can uninstall it while retaining the database contents, the new package includes a migration moving the data to the new structure.
-Remember to make a backup before performing this operation!
+- 💬 **Complete Messaging System** - Private and group conversations with full message history
+- ⚡ **Real-time Communication** - Built-in broadcasting support for instant messaging
+- 🔌 **Multiple Broadcasting Drivers** - Support for Pusher, Laravel WebSockets, Firebase, MQTT, and Socket.IO
+- 🌐 **RESTful API** - Ready-to-use API endpoints for web and mobile applications
+- 🪝 **Extensible Hook System** - Customize behavior without modifying core code
+- 🌍 **Multilingual Support** - Easily translate all messages to any language
+- 📱 **Mobile-Friendly** - Works seamlessly with mobile applications
+- 🔒 **Secure** - Built with security best practices
+
+## Compatibility
+
+| Package Version | Laravel Compatibility |
+|-----------------|-----------------------|
+| 1.*             | 5.6 - 9.*             |
+| 2.*             | 8.* - 11.*            |
+| 3.*             | 9.* - 12.*            |
+
+> **Note:** Version 3.0.0 introduces significant new features including real-time broadcasting, hooks system, API endpoints, and multilingual support.
 
 ## Installation
-```
+
+### 1. Install via Composer
+
+```bash
 composer require dominservice/conversations
 ```
-Or place manually in composer.json:
+
+### 2. Publish Configuration and Migrations
+
+```bash
+php artisan vendor:publish --provider="Dominservice\Conversations\ConversationsServiceProvider"
 ```
-"require": {
-    "dominservice/conversations": "^1.0"
-}
+
+### 3. Run Migrations
+
+```bash
+php artisan migrate
 ```
-Run:
-```
-composer update
-```
-Add the service provider to `config/app.php`
+
+### 4. Register Service Provider (Laravel < 5.5)
+
+For Laravel 5.5 and above, the package will be auto-discovered. For older versions, add the service provider to `config/app.php`:
 
 ```php
 'providers' => [
+    // Other service providers...
     Dominservice\Conversations\ConversationsServiceProvider::class,
 ],
 
-(...)
-
 'aliases' => [
+    // Other aliases...
     'Conversations' => Dominservice\Conversations\Facade\Conversations::class,
 ]
 ```
-Publish config:
+
+## Quick Start
+
+### Basic Usage
+
+```php
+// Create a new conversation
+$conversationId = Conversations::create([$user1Id, $user2Id], null, null, 'Hello!');
+
+// Add a message to a conversation
+Conversations::addMessage($conversationId, 'How are you doing?');
+
+// Get all conversations for a user
+$conversations = Conversations::getConversations($userId);
+
+// Get messages in a conversation
+$messages = Conversations::getMessages($conversationId, $userId);
+```
+
+### Real-time Chat
+
+Enable broadcasting in your `.env` file:
 
 ```
-php artisan vendor:publish --provider="Dominservice\Conversations\ConversationsServiceProvider"
+CONVERSATIONS_BROADCASTING_ENABLED=true
+CONVERSATIONS_BROADCASTING_DRIVER=pusher
 ```
-Migrate
-```
-php artisan migrate
-```
-### REMEMBER
-Configure the package in the __config/conversations.php__ file 
 
-## Additional Documentation
+Then use the broadcasting features:
 
+```php
+// Broadcast that a user is typing
+ConversationsBroadcasting::broadcastUserTyping($conversationId, $userId, $userName);
+```
+
+## Documentation
+
+Comprehensive documentation is available to help you get the most out of the package:
+
+- [Examples & Usage Guide](README-EXAMPLES.md) - Code examples and implementation guides
 - [API Documentation](README-API.md) - Information about the REST API endpoints
 - [Broadcasting Documentation](README-BROADCASTING.md) - Information about real-time broadcasting
 - [Hooks Documentation](README-HOOKS.md) - Information about the hook system
-- [Translations Documentation](README-TRANSLATIONS.md) - Information about customizing messages in different languages
+- [Translations Documentation](README-TRANSLATIONS.md) - Information about customizing messages
 - [Routes Documentation](README-ROUTES.md) - Information about customizing API routes
 
-# Testing
+## Upgrading from laravel_chat
+
+This package is a continuation of the [dominservice/laravel_chat](https://github.com/dominservice/laravel_chat) package. If you're upgrading:
+
+1. Install this package alongside the old one
+2. Run migrations (they include data migration scripts)
+3. Remove the old package
+
+Always make a backup before performing this operation!
+
+## Testing
 
 The package includes automated tests to ensure functionality works as expected. To run the tests:
 
-## Requirements
+### Requirements
 
 - PHP with SQLite extension enabled (`php-sqlite3`)
 
@@ -86,7 +138,7 @@ On CentOS/RHEL:
 sudo yum install php-sqlite3
 ```
 
-## Running Tests
+### Running Tests
 
 ```bash
 composer install
@@ -99,157 +151,114 @@ Alternatively, you can use the provided script:
 ./run-tests.sh
 ```
 
-# Usage
+## Usage Examples
 
-#### __Create New Conversation:__
-```php
-$convs = (new Dominservice\Conversations\Conversations)->create($users, $relationType = null, $relationId = null, $content = null, $getObject = false);
-```
-Or short with helper
-```php
-$convs = conversation_create($users, $relationType = null, $relationId = null, $content = null, $getObject = false);
-```
-if ``` $getObject === true ``` you get conversation object "Dominservice\Conversations\Entities\Conversation" with all relations and users, else method return onlu conversation ID
-#### __Add message to Conversation if exists or create:__
-```php
-$messageId = (new Dominservice\Conversations\Conversations)->addMessageOrCreateConversation($users, $content, $relationType = null, $relationId = null);
-```
-Or short with helper
-```php
-$messageId = conversation_add_or_create($users, $content, $relationType = null, $relationId = null);
-```
-#### __Add message to Conversation:__
-```php
-$messageId = (new Dominservice\Conversations\Conversations)->addMessage($convUuid, $content, $addUser = false);
-```
-Or short with helper
-```php
-$messageId = conversation_add_message($convUuid, $content, $addUser = false);
-```
-#### __Get Conversation ID between users:__
-```php
-$conversationId = (new Dominservice\Conversations\Conversations)->getIdBetweenUsers(array $users, $relationType = null, $relationId = null);
-```
-Or short with helper
-```php
-$conversationId = conversation_id_between($users, $relationType = null, $relationId = null);
-```
-#### __Check exists user in Conversation:__
-```php
-$existsUser = (new Dominservice\Conversations\Conversations)->existsUser($convUuid, $userId);
-```
-Or short with helper
-```php
-$existsUser = conversation_user_exists($convUuid, $userId = null);
-```
-On helper if userId is null, userId = \Auth::user()->id
-#### __Get count all unreaded messages:__
-```php
-$count = (new Dominservice\Conversations\Conversations)->getUnreadCount($userId);
-```
-Or short with helper
-```php
-$count = conversation_unread_count($userId = null);
-```
-On helper if userId is null, userId = \Auth::user()->id
-#### __Get count unreaded messages in specific conversation:__
-```php
-$count = (new Dominservice\Conversations\Conversations)->getConversationUnreadCount($convUuid, $userId);
-```
-Or short with helper
-```php
-$count = conversation_unread_count_per_id($convUuid, $userId = null);
-```
-On helper if userId is null, userId = \Auth::user()->id
-#### __Delete Conversation:__
-This method tes status to DELETED for all messages in conversation for selected user.
-If all messages for all users has status DELETED remove permanently all values for conversation.
-```php
-(new Dominservice\Conversations\Conversations)->delete($convUuid, $userId);
-```
-Or short with helper
-```php
-conversation_delete($convUuid, $userId = null);
-```
-On helper if userId is null, userId = \Auth::user()->id
+Here are some common usage examples. For more detailed examples, see the [Examples & Usage Guide](README-EXAMPLES.md).
 
-#### __Get all Conversations for specyfic user:__
-```php
-$conversations = (new Dominservice\Conversations\Conversations)->getConversations($userId, $relationType = null, $relationId = null);
-```
-This will return you a "Illuminate\Support\Collection" of "Dominservice\Conversations\Entities\Conversation" objects.
-And foreach Conversation there, you will have the last message of the conversation, and the users of the conversation.
-Example:
-```php
-foreach ( $conversations as $conv ) {
-    $getNumOfUsers = $conv->getNumOfUsers();
-    $users = $conv->users; /* Collection */
-
-    /* $lastMessage Dominservice\Conversations\Entities\Message */
-    $lastMessage = $conv->getLastMessage();
-
-    $senderId = $lastMessage->sender;
-    $content = $lastMessage->content;
-    $status = $lastMessage->status;
-}
-```
-Or short with helper
-```php
-$conversations = conversations($userId = null, $relationType = null, $relationId = null, $withUsersList = true);
-```
-On helper if userId is null, userId = \Auth::user()->id, and helper set array  with users adn conversations.
-#### __Get messages of conversation:__
+### Creating and Managing Conversations
 
 ```php
-$messages = (new Dominservice\Conversations\Conversations)->getMessages($convUuid, $userId, $newToOld = true, $limit = null, $start = null);
+// Create a new conversation between users
+$conversationId = Conversations::create([$user1Id, $user2Id], null, null, 'Initial message');
+
+// Add a message to an existing conversation
+$messageId = Conversations::addMessage($conversationId, 'Hello, how are you?');
+
+// Create a conversation or add to existing one if it exists
+$messageId = Conversations::addMessageOrCreateConversation([$user1Id, $user2Id], 'Hello!');
+
+// Get conversation ID between specific users
+$conversationId = Conversations::getIdBetweenUsers([$user1Id, $user2Id]);
+
+// Check if a user is part of a conversation
+$isUserInConversation = Conversations::existsUser($conversationId, $userId);
+
+// Delete a conversation (for a specific user)
+Conversations::delete($conversationId, $userId);
 ```
-Or short with helper
-```php
-$messages = conversation_messages($convUuid, $userId = null, $newToOld = true, $limit = null, $start = null);
-```
-On helper if userId is null, userId = \Auth::user()->id
-#### __Get unread messages of conversation:__
+
+### Reading Messages and Conversations
 
 ```php
-$messages = (new Dominservice\Conversations\Conversations)->getUnreadMessages($convUuid, $userId, $newToOld = true, $limit = null, $start = null);
-```
-Or short with helper
-```php
-$messages = conversation_messages_unread($convUuid, $userId = null, $newToOld = true, $limit = null, $start = null);
-```
-On helper if userId is null, userId = \Auth::user()->id
-#### Set status for message:
-Mark messages. If `userId` is `null` then set current user id.
-```php
-conversation_mark_as_archived($convUuid, $msgId, $userId = null);
-conversation_mark_as_deleted($convUuid, $msgId, $userId = null);
-conversation_mark_as_unread($convUuid, $msgId, $userId = null);
-conversation_mark_as_read($convUuid, $msgId, $userId = null);
+// Get all conversations for a user
+$conversations = Conversations::getConversations($userId);
 
-conversation_mark_as_read_all($convUuid, $userId = null);
-conversation_mark_as_unread_all($convUuid, $userId = null);
+// Get messages in a conversation
+$messages = Conversations::getMessages($conversationId, $userId);
+
+// Get only unread messages
+$unreadMessages = Conversations::getUnreadMessages($conversationId, $userId);
+
+// Get count of all unread messages for a user
+$unreadCount = Conversations::getUnreadCount($userId);
+
+// Get count of unread messages in a specific conversation
+$conversationUnreadCount = Conversations::getConversationUnreadCount($conversationId, $userId);
 ```
-### Example
+
+### Message Status Management
+
 ```php
-    public function conversations() {
-        $currentUser = Auth::user();
-        //get the conversations
-        $conversations = conversations($currentUser->id);
-        //array for storing our users data, as that Conversations only provides user id's
-        $users = collect();
+// Mark a message as read
+Conversations::markAsRead($conversationId, $messageId, $userId);
 
-        //gathering users
-        foreach ( $conversations as $conv ) {
-            $users->push($conv->users);
-        }
-        //making sure each user appears once
-        $users = $users->unique();
+// Mark a message as unread
+Conversations::markAsUnread($conversationId, $messageId, $userId);
 
-        return View::make('conversations_page')
-            ->with('users', $users)
-            ->with('user', $currentUser)
-            ->with('conversations', $conversations);
-    }
+// Mark a message as deleted
+Conversations::markAsDeleted($conversationId, $messageId, $userId);
+
+// Mark a message as archived
+Conversations::markAsArchived($conversationId, $messageId, $userId);
+
+// Mark all messages in a conversation as read
+Conversations::markReadAll($conversationId, $userId);
+
+// Mark all messages in a conversation as unread
+Conversations::markUnreadAll($conversationId, $userId);
 ```
-# Credits
-[tzookb/tbmsg](https://github.com/tzookb/tbmsg)
+
+### Helper Functions
+
+The package also provides helper functions for easier usage:
+
+```php
+// Create a conversation
+$conversationId = conversation_create([$user1Id, $user2Id], null, null, 'Initial message');
+
+// Add a message
+$messageId = conversation_add_message($conversationId, 'Hello!');
+
+// Get conversations
+$conversations = conversations($userId);
+
+// Get messages
+$messages = conversation_messages($conversationId, $userId);
+
+// Mark as read
+conversation_mark_as_read($conversationId, $messageId, $userId);
+```
+
+## Why Choose Laravel Conversations?
+
+- **Complete Solution**: Everything you need for a messaging system in one package
+- **Highly Customizable**: Extensive configuration options and hook system
+- **Well-Documented**: Comprehensive documentation with examples
+- **Actively Maintained**: Regular updates and improvements
+- **Production Ready**: Used in production applications
+- **Mobile Compatible**: Works with web and mobile applications
+- **Real-time Capable**: Built-in broadcasting support
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This package is open-sourced software licensed under the [MIT license](LICENSE).
+
+## Credits
+
+- [dominservice](https://github.com/dominservice)
+- [tzookb/tbmsg](https://github.com/tzookb/tbmsg) (Original inspiration)
+- [All Contributors](../../contributors)

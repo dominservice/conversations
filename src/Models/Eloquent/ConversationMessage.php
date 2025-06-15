@@ -10,7 +10,7 @@
  * @author    DSO-IT Mateusz Domin <biuro@dso.biz.pl>
  * @copyright (c) 2021 DSO-IT Mateusz Domin
  * @license   MIT
- * @version   1.0.0
+ * @version   3.0.0
  */
 
 namespace Dominservice\Conversations\Models\Eloquent;
@@ -45,7 +45,7 @@ class ConversationMessage extends Model
     {
         return ($date != null) ?  $date->format('Y-m-d H:i:s') : null;
     }
-    
+
     public function sender() {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
 

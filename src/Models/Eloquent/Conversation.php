@@ -10,7 +10,7 @@
  * @author    DSO-IT Mateusz Domin <biuro@dso.biz.pl>
  * @copyright (c) 2021 DSO-IT Mateusz Domin
  * @license   MIT
- * @version   1.0.0
+ * @version   3.0.0
  */
 
 namespace Dominservice\Conversations\Models\Eloquent;
@@ -69,7 +69,7 @@ class Conversation  extends Model
 
     public function users() {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
-        
+
         return $this->belongsToMany(
             $userModel,
             'conversation_users',
