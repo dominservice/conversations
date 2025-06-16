@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<ruleset name="Laravel Conversations Coding Standard">
+    <description>Laravel Conversations Coding Standard</description>
+
+    <!-- Display progress -->
+    <arg value="p"/>
+    <!-- Use colors in output -->
+    <arg name="colors"/>
+
+    <!-- Inherit rules from PSR-12 -->
+    <rule ref="PSR12"/>
+
+    <!-- Exclude vendor directory -->
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <exclude-pattern>tests/*</exclude-pattern>
+
+    <!-- Exclude specific files that might need special handling -->
+    <exclude-pattern>src/Helpers/helpers.php</exclude-pattern>
+</ruleset>

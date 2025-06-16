@@ -187,6 +187,17 @@ Alternatively, you can use the provided script:
 ./run-tests.sh
 ```
 
+### Continuous Integration
+
+This package uses GitHub Actions for continuous integration and continuous deployment (CI/CD). The workflow includes:
+
+- Running tests on multiple PHP versions (8.1, 8.2, 8.3) and Laravel versions (9.*, 10.*, 11.*)
+- Code style checking with PHP_CodeSniffer (PSR-12)
+- Static analysis with PHPStan
+- Automated releases when tags are pushed
+
+The CI/CD pipeline ensures that all code changes are thoroughly tested before being merged into the main branch. You can see the workflow configuration in the `.github/workflows/ci-cd.yml` file.
+
 ## Usage Examples
 
 Here are some common usage examples. For more detailed examples, see the [Examples & Usage Guide](README-EXAMPLES.md).
