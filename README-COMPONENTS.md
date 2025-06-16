@@ -25,9 +25,80 @@ resources/
 │   ├── vue/
 │   │   ├── vite/           # Vue components for Vite
 │   │   └── laravel-mix/    # Vue components for Laravel Mix
-│   └── react/
-│       ├── vite/           # React components for Vite
-│       └── laravel-mix/    # React components for Laravel Mix
+│   ├── react/
+│   │   ├── vite/           # React components for Vite
+│   │   └── laravel-mix/    # React components for Laravel Mix
+│   └── types/
+│       ├── vue/            # TypeScript definitions for Vue components
+│       └── react/          # TypeScript definitions for React components
+```
+
+## TypeScript Support
+
+This package provides TypeScript definitions for all Vue and React components, making it easier to use them in TypeScript projects.
+
+### Publishing TypeScript Definitions
+
+To use the TypeScript definitions in your application, you need to publish them first:
+
+```bash
+php artisan vendor:publish --tag=conversations-typescript
+```
+
+This will copy all the TypeScript definitions to your application's `resources/js/vendor/conversations/types` directory.
+
+### Using TypeScript Definitions
+
+#### Vue.js with TypeScript
+
+```typescript
+<script lang="ts">
+import { defineComponent } from 'vue';
+import ConversationList from '@/vendor/conversations/vue/vite/ConversationList.vue';
+import type { Conversation } from '@/vendor/conversations/types/vue/ConversationList';
+
+export default defineComponent({
+  components: {
+    ConversationList
+  },
+  data() {
+    return {
+      conversations: [] as Conversation[],
+      activeConversationId: null as string | null
+    };
+  },
+  methods: {
+    handleSelectConversation(conversation: Conversation) {
+      this.activeConversationId = conversation.uuid;
+    }
+  }
+});
+</script>
+```
+
+#### React with TypeScript
+
+```tsx
+import React, { useState } from 'react';
+import ConversationList from '@/vendor/conversations/react/vite/ConversationList';
+import type { Conversation } from '@/vendor/conversations/types/react/ConversationList';
+
+function ChatSidebar() {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+
+  const handleSelectConversation = (conversation: Conversation) => {
+    setActiveConversationId(conversation.uuid);
+  };
+
+  return (
+    <ConversationList
+      conversations={conversations}
+      activeConversationId={activeConversationId}
+      onSelectConversation={handleSelectConversation}
+    />
+  );
+}
 ```
 
 ## Installation

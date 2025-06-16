@@ -77,6 +77,12 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__ . '/../resources/js/react/laravel-mix' => resource_path('js/vendor/conversations/react/laravel-mix'),
         ], 'conversations-components');
 
+        // Publish TypeScript definitions
+        $this->publishes([
+            __DIR__ . '/../resources/js/types/vue' => resource_path('js/vendor/conversations/types/vue'),
+            __DIR__ . '/../resources/js/types/react' => resource_path('js/vendor/conversations/types/react'),
+        ], 'conversations-typescript');
+
         // Publish all assets with a single tag
         $this->publishes([
             __DIR__ . '/../config/conversations.php' => config_path('conversations.php'),
@@ -93,6 +99,8 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__ . '/../resources/js/vue/laravel-mix' => resource_path('js/vendor/conversations/vue/laravel-mix'),
             __DIR__ . '/../resources/js/react/vite' => resource_path('js/vendor/conversations/react/vite'),
             __DIR__ . '/../resources/js/react/laravel-mix' => resource_path('js/vendor/conversations/react/laravel-mix'),
+            __DIR__ . '/../resources/js/types/vue' => resource_path('js/vendor/conversations/types/vue'),
+            __DIR__ . '/../resources/js/types/react' => resource_path('js/vendor/conversations/types/react'),
         ], 'conversations');
 
         // Load translations

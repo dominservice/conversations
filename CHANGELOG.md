@@ -10,9 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - GraphQL API support for managing conversations and messages
 - Ready-to-use frontend components for Vue.js and React
+- TypeScript definitions for Vue and React components
 - Comprehensive documentation:
   - GraphQL API Documentation
   - Frontend Components Documentation
+  - TypeScript Support Documentation
 
 ## [3.0.0] - 2024-06-15
 

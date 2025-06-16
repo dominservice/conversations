@@ -20,6 +20,7 @@ A powerful, flexible, and feature-rich messaging system for Laravel applications
 - 🌍 **Multilingual Support** - Easily translate all messages to any language
 - 📱 **Mobile-Friendly** - Works seamlessly with mobile applications
 - 🔒 **Secure** - Built with security best practices including virus scanning for attachments
+- 📝 **TypeScript Support** - Type definitions for Vue and React components
 
 ## Compatibility
 
@@ -59,6 +60,12 @@ php artisan vendor:publish --tag=conversations-translations
 
 # Publish only routes
 php artisan vendor:publish --tag=conversations-routes
+
+# Publish only frontend components
+php artisan vendor:publish --tag=conversations-components
+
+# Publish only TypeScript definitions
+php artisan vendor:publish --tag=conversations-typescript
 
 # Publish all assets
 php artisan vendor:publish --tag=conversations
@@ -130,6 +137,7 @@ Comprehensive documentation is available to help you get the most out of the pac
 - [API Documentation](README-API.md) - Information about the REST API endpoints
 - [GraphQL API Documentation](README-GRAPHQL.md) - Information about the GraphQL API
 - [Frontend Components](README-COMPONENTS.md) - Ready-to-use Vue and React components
+- [TypeScript Support](README-COMPONENTS.md#typescript-support) - Type definitions for Vue and React components
 - [Broadcasting Documentation](README-BROADCASTING.md) - Information about real-time broadcasting
 - [Hooks Documentation](README-HOOKS.md) - Information about the hook system
 - [Translations Documentation](README-TRANSLATIONS.md) - Information about customizing messages
