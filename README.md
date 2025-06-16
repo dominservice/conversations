@@ -134,6 +134,7 @@ ConversationsBroadcasting::broadcastUserTyping($conversationId, $userId, $userNa
 Comprehensive documentation is available to help you get the most out of the package:
 
 - [Examples & Usage Guide](README-EXAMPLES.md) - Code examples and implementation guides
+- [Integration Guides](README-INTEGRATION.md) - Detailed guides for integrating with Laravel Breeze, Jetstream, Livewire, Inertia.js, Sanctum, and Nova
 - [API Documentation](README-API.md) - Information about the REST API endpoints
 - [GraphQL API Documentation](README-GRAPHQL.md) - Information about the GraphQL API
 - [Frontend Components](README-COMPONENTS.md) - Ready-to-use Vue and React components
