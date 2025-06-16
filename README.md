@@ -129,6 +129,7 @@ Comprehensive documentation is available to help you get the most out of the pac
 - [Examples & Usage Guide](README-EXAMPLES.md) - Code examples and implementation guides
 - [API Documentation](README-API.md) - Information about the REST API endpoints
 - [GraphQL API Documentation](README-GRAPHQL.md) - Information about the GraphQL API
+- [Frontend Components](README-COMPONENTS.md) - Ready-to-use Vue and React components
 - [Broadcasting Documentation](README-BROADCASTING.md) - Information about real-time broadcasting
 - [Hooks Documentation](README-HOOKS.md) - Information about the hook system
 - [Translations Documentation](README-TRANSLATIONS.md) - Information about customizing messages

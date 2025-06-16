@@ -69,6 +69,14 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__ . '/Http/routes.php' => base_path('routes/conversation-api.php'),
         ], 'conversations-routes');
 
+        // Publish frontend components
+        $this->publishes([
+            __DIR__ . '/../resources/js/vue/vite' => resource_path('js/vendor/conversations/vue/vite'),
+            __DIR__ . '/../resources/js/vue/laravel-mix' => resource_path('js/vendor/conversations/vue/laravel-mix'),
+            __DIR__ . '/../resources/js/react/vite' => resource_path('js/vendor/conversations/react/vite'),
+            __DIR__ . '/../resources/js/react/laravel-mix' => resource_path('js/vendor/conversations/react/laravel-mix'),
+        ], 'conversations-components');
+
         // Publish all assets with a single tag
         $this->publishes([
             __DIR__ . '/../config/conversations.php' => config_path('conversations.php'),
@@ -81,6 +89,10 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__.'/../database/migrations/update_to_version_3.php.stub' => $this->getMigrationFileName($filesystem, 'update_conversations_to_version_3'),
             __DIR__ . '/../lang' => $targetLangPath,
             __DIR__ . '/Http/routes.php' => base_path('routes/conversation-api.php'),
+            __DIR__ . '/../resources/js/vue/vite' => resource_path('js/vendor/conversations/vue/vite'),
+            __DIR__ . '/../resources/js/vue/laravel-mix' => resource_path('js/vendor/conversations/vue/laravel-mix'),
+            __DIR__ . '/../resources/js/react/vite' => resource_path('js/vendor/conversations/react/vite'),
+            __DIR__ . '/../resources/js/react/laravel-mix' => resource_path('js/vendor/conversations/react/laravel-mix'),
         ], 'conversations');
 
         // Load translations

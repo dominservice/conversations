@@ -5,6 +5,15 @@ All notable changes to the Laravel Conversations package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2024-06-16
+
+### Added
+- GraphQL API support for managing conversations and messages
+- Ready-to-use frontend components for Vue.js and React
+- Comprehensive documentation:
+  - GraphQL API Documentation
+  - Frontend Components Documentation
+
 ## [3.0.0] - 2024-06-15
 
 ### Added
@@ -16,7 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Socket.IO
 - Extensible hook system for customizing behavior without modifying core code
 - RESTful API endpoints for managing conversations and messages
-- GraphQL API support for managing conversations and messages
 - Multilingual support with translation capabilities
 - Customizable routes
 - Broadcasting events:
@@ -27,7 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - UserTyping
 - Comprehensive documentation:
   - API Documentation
-  - GraphQL API Documentation
   - Broadcasting Documentation
   - Hooks Documentation
   - Translations Documentation
