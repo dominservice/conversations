@@ -1,0 +1,192 @@
+"""
+This file contains the GraphQL schema for conversations.
+"""
+
+"""
+A conversation between users.
+"""
+type Conversation {
+    """
+    The UUID of the conversation.
+    """
+    uuid: ID!
+    
+    """
+    The title of the conversation.
+    """
+    title: String
+    
+    """
+    The type of the conversation.
+    """
+    type: ConversationType @belongsTo
+    
+    """
+    The users participating in the conversation.
+    """
+    users: [User!]! @belongsToMany
+    
+    """
+    The messages in the conversation.
+    """
+    messages: [Message!]! @hasMany
+    
+    """
+    The relations of the conversation.
+    """
+    relations: [ConversationRelation!]! @hasMany
+    
+    """
+    The last message in the conversation.
+    """
+    lastMessage: Message @hasOne
+    
+    """
+    The owner of the conversation.
+    """
+    owner: User @belongsTo
+    
+    """
+    The number of unread messages in the conversation.
+    """
+    unreadCount: Int! @method(name: "getCountUnreadedMessages")
+    
+    """
+    Whether the conversation has unread messages.
+    """
+    hasUnread: Boolean! @method(name: "hasUnreadedMessages")
+    
+    """
+    The date the conversation was created.
+    """
+    createdAt: DateTime!
+    
+    """
+    The date the conversation was last updated.
+    """
+    updatedAt: DateTime!
+}
+
+"""
+The type of a conversation.
+"""
+type ConversationType {
+    """
+    The ID of the conversation type.
+    """
+    id: ID!
+    
+    """
+    The name of the conversation type.
+    """
+    name: String!
+    
+    """
+    The color of the conversation type.
+    """
+    color: String
+    
+    """
+    Whether the conversation type is custom.
+    """
+    custom: Boolean
+}
+
+"""
+A relation between a conversation and another model.
+"""
+type ConversationRelation {
+    """
+    The ID of the relation.
+    """
+    id: ID!
+    
+    """
+    The conversation UUID.
+    """
+    conversationUuid: ID!
+    
+    """
+    The conversation.
+    """
+    conversation: Conversation! @belongsTo(relation: "conversation")
+    
+    """
+    The parent type.
+    """
+    parentType: String!
+    
+    """
+    The parent ID.
+    """
+    parentId: ID!
+}
+
+extend type Query {
+    """
+    Get a list of conversations for the authenticated user.
+    """
+    conversations(
+        """
+        Filter by relation type.
+        """
+        relationType: String
+        
+        """
+        Filter by relation ID.
+        """
+        relationId: ID
+    ): [Conversation!]! @guard
+    
+    """
+    Get a specific conversation by UUID.
+    """
+    conversation(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+    ): Conversation @guard
+}
+
+extend type Mutation {
+    """
+    Create a new conversation.
+    """
+    createConversation(
+        """
+        The users to include in the conversation.
+        """
+        users: [ID!]!
+        
+        """
+        The initial message content.
+        """
+        content: String
+        
+        """
+        The relation type.
+        """
+        relationType: String
+        
+        """
+        The relation ID.
+        """
+        relationId: ID
+    ): Conversation @guard
+    
+    """
+    Delete a conversation.
+    """
+    deleteConversation(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+    ): Boolean! @guard
+}
+
+"""
+A scalar representing a date and time.
+"""
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")

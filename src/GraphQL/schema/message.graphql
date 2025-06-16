@@ -1,0 +1,457 @@
+"""
+This file contains the GraphQL schema for messages.
+"""
+
+"""
+A message in a conversation.
+"""
+type Message {
+    """
+    The ID of the message.
+    """
+    id: ID!
+    
+    """
+    The UUID of the conversation.
+    """
+    conversationUuid: ID!
+    
+    """
+    The conversation the message belongs to.
+    """
+    conversation: Conversation! @belongsTo(relation: "conversation")
+    
+    """
+    The user who sent the message.
+    """
+    sender: User! @belongsTo
+    
+    """
+    The content of the message.
+    """
+    content: String
+    
+    """
+    The type of the message.
+    """
+    messageType: String!
+    
+    """
+    Whether the message is editable.
+    """
+    editable: Boolean!
+    
+    """
+    The date the message was edited.
+    """
+    editedAt: DateTime
+    
+    """
+    The parent message if this is a reply.
+    """
+    parent: Message @belongsTo
+    
+    """
+    The replies to this message.
+    """
+    replies: [Message!]! @hasMany
+    
+    """
+    The attachments of the message.
+    """
+    attachments: [Attachment!]! @hasMany
+    
+    """
+    The reactions to the message.
+    """
+    reactions: [Reaction!]! @hasMany
+    
+    """
+    The status of the message for different users.
+    """
+    status: [MessageStatus!]! @hasMany
+    
+    """
+    The date the message was created.
+    """
+    createdAt: DateTime!
+    
+    """
+    The date the message was last updated.
+    """
+    updatedAt: DateTime!
+    
+    """
+    Check if the message has been edited.
+    """
+    hasBeenEdited: Boolean! @method
+    
+    """
+    Check if the message is a reply to another message.
+    """
+    isReply: Boolean! @method
+    
+    """
+    Check if the message has replies.
+    """
+    hasReplies: Boolean! @method
+    
+    """
+    Check if the message has attachments.
+    """
+    hasAttachments: Boolean! @method
+    
+    """
+    Check if the message has reactions.
+    """
+    hasReactions: Boolean! @method
+    
+    """
+    Get the thread root message.
+    """
+    threadRoot: Message! @method(name: "getThreadRoot")
+    
+    """
+    Get all messages in the same thread.
+    """
+    threadMessages: [Message!]! @method(name: "getThreadMessages")
+    
+    """
+    Get reactions grouped by emoji with count.
+    """
+    reactionsSummary: [ReactionSummary!]! @method(name: "getReactionsSummary")
+}
+
+"""
+The status of a message for a user.
+"""
+type MessageStatus {
+    """
+    The ID of the message status.
+    """
+    id: ID!
+    
+    """
+    The ID of the message.
+    """
+    messageId: ID!
+    
+    """
+    The message.
+    """
+    message: Message! @belongsTo
+    
+    """
+    The user.
+    """
+    user: User! @belongsTo
+    
+    """
+    Whether the message is read.
+    """
+    isRead: Boolean!
+    
+    """
+    Whether the message is deleted.
+    """
+    isDeleted: Boolean!
+}
+
+"""
+A summary of reactions to a message.
+"""
+type ReactionSummary {
+    """
+    The reaction emoji.
+    """
+    reaction: String!
+    
+    """
+    The count of users who reacted with this emoji.
+    """
+    count: Int!
+}
+
+extend type Query {
+    """
+    Get messages in a conversation.
+    """
+    messages(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The order of the messages (asc or desc).
+        """
+        order: String = "asc"
+        
+        """
+        The maximum number of messages to return.
+        """
+        limit: Int
+        
+        """
+        The offset to start from.
+        """
+        start: Int
+    ): [Message!]! @guard
+    
+    """
+    Get unread messages in a conversation.
+    """
+    unreadMessages(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The order of the messages (asc or desc).
+        """
+        order: String = "asc"
+        
+        """
+        The maximum number of messages to return.
+        """
+        limit: Int
+        
+        """
+        The offset to start from.
+        """
+        start: Int
+    ): [Message!]! @guard
+    
+    """
+    Get users who have read a specific message.
+    """
+    messageReadBy(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message.
+        """
+        messageId: ID!
+    ): [User!]! @guard
+    
+    """
+    Get all messages in a conversation with their read status for all users.
+    """
+    conversationReadBy(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+    ): [Message!]! @guard
+    
+    """
+    Get all messages in a thread.
+    """
+    thread(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message.
+        """
+        messageId: ID!
+    ): [Message!]! @guard
+    
+    """
+    Get all reactions for a message.
+    """
+    messageReactions(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message.
+        """
+        messageId: ID!
+    ): [Reaction!]! @guard
+    
+    """
+    Check if a message is editable.
+    """
+    isMessageEditable(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message.
+        """
+        messageId: ID!
+    ): Boolean! @guard
+}
+
+extend type Mutation {
+    """
+    Send a message to a conversation.
+    """
+    sendMessage(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The content of the message.
+        """
+        content: String
+        
+        """
+        The ID of the parent message if this is a reply.
+        """
+        parentId: ID
+    ): Message @guard
+    
+    """
+    Mark a message as read.
+    """
+    markMessageAsRead(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message.
+        """
+        messageId: ID!
+    ): Boolean! @guard
+    
+    """
+    Mark a message as unread.
+    """
+    markMessageAsUnread(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message.
+        """
+        messageId: ID!
+    ): Boolean! @guard
+    
+    """
+    Delete a message.
+    """
+    deleteMessage(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message.
+        """
+        messageId: ID!
+    ): Boolean! @guard
+    
+    """
+    Edit a message.
+    """
+    editMessage(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message.
+        """
+        messageId: ID!
+        
+        """
+        The new content of the message.
+        """
+        content: String!
+    ): Message @guard
+    
+    """
+    Reply to a message.
+    """
+    replyToMessage(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message to reply to.
+        """
+        messageId: ID!
+        
+        """
+        The content of the reply.
+        """
+        content: String!
+    ): Message @guard
+    
+    """
+    Add a reaction to a message.
+    """
+    addReaction(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message.
+        """
+        messageId: ID!
+        
+        """
+        The reaction emoji.
+        """
+        reaction: String!
+    ): Reaction @guard
+    
+    """
+    Remove a reaction from a message.
+    """
+    removeReaction(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message.
+        """
+        messageId: ID!
+        
+        """
+        The reaction emoji.
+        """
+        reaction: String!
+    ): Boolean! @guard
+    
+    """
+    Broadcast that the user is typing.
+    """
+    typing(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The name of the user.
+        """
+        userName: String
+    ): Boolean! @guard
+}

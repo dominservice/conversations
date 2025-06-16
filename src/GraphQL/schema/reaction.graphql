@@ -1,0 +1,63 @@
+"""
+This file contains the GraphQL schema for message reactions.
+"""
+
+"""
+A reaction to a message.
+"""
+type Reaction {
+    """
+    The ID of the reaction.
+    """
+    id: ID!
+    
+    """
+    The ID of the message.
+    """
+    messageId: ID!
+    
+    """
+    The message the reaction belongs to.
+    """
+    message: Message! @belongsTo
+    
+    """
+    The user who created the reaction.
+    """
+    user: User! @belongsTo
+    
+    """
+    The reaction emoji.
+    """
+    reaction: String!
+    
+    """
+    The date the reaction was created.
+    """
+    createdAt: DateTime!
+    
+    """
+    The date the reaction was last updated.
+    """
+    updatedAt: DateTime!
+}
+
+"""
+A placeholder for the User type, which should be defined by the application.
+"""
+type User {
+    """
+    The ID of the user.
+    """
+    id: ID!
+    
+    """
+    The name of the user.
+    """
+    name: String
+    
+    """
+    The email of the user.
+    """
+    email: String
+}

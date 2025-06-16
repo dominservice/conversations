@@ -1,0 +1,28 @@
+"""
+This is the main schema file for the Conversations GraphQL API.
+It imports all the other schema files.
+"""
+
+type Query {
+    """
+    A placeholder query to ensure the schema is valid.
+    Will be extended by imported files.
+    """
+    _placeholder: String @deprecated(reason: "This is a placeholder field")
+}
+
+type Mutation {
+    """
+    A placeholder mutation to ensure the schema is valid.
+    Will be extended by imported files.
+    """
+    _placeholder: String @deprecated(reason: "This is a placeholder field")
+}
+
+"""
+Import all the other schema files.
+"""
+#import conversation.graphql
+#import message.graphql
+#import attachment.graphql
+#import reaction.graphql

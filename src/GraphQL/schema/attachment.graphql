@@ -1,0 +1,182 @@
+"""
+This file contains the GraphQL schema for attachments.
+"""
+
+"""
+An attachment to a message.
+"""
+type Attachment {
+    """
+    The ID of the attachment.
+    """
+    id: ID!
+    
+    """
+    The ID of the message.
+    """
+    messageId: ID!
+    
+    """
+    The message the attachment belongs to.
+    """
+    message: Message! @belongsTo
+    
+    """
+    The filename of the attachment.
+    """
+    filename: String!
+    
+    """
+    The original filename of the attachment.
+    """
+    originalFilename: String!
+    
+    """
+    The MIME type of the attachment.
+    """
+    mimeType: String!
+    
+    """
+    The extension of the attachment.
+    """
+    extension: String!
+    
+    """
+    The type of the attachment (file, image, document, audio, video).
+    """
+    type: String!
+    
+    """
+    The size of the attachment in bytes.
+    """
+    size: Int!
+    
+    """
+    The path to the attachment.
+    """
+    path: String!
+    
+    """
+    The metadata of the attachment.
+    """
+    metadata: JSON
+    
+    """
+    Whether the attachment is optimized.
+    """
+    isOptimized: Boolean!
+    
+    """
+    Whether the attachment is scanned.
+    """
+    isScanned: Boolean!
+    
+    """
+    Whether the attachment is safe.
+    """
+    isSafe: Boolean!
+    
+    """
+    The URL of the attachment.
+    """
+    url: String! @method(name: "getUrlAttribute")
+    
+    """
+    The full path of the attachment.
+    """
+    fullPath: String! @method(name: "getFullPathAttribute")
+    
+    """
+    The human-readable size of the attachment.
+    """
+    humanSize: String! @method(name: "getHumanSizeAttribute")
+    
+    """
+    Check if the attachment is an image.
+    """
+    isImage: Boolean! @method
+    
+    """
+    Check if the attachment is a document.
+    """
+    isDocument: Boolean! @method
+    
+    """
+    Check if the attachment is an audio file.
+    """
+    isAudio: Boolean! @method
+    
+    """
+    Check if the attachment is a video file.
+    """
+    isVideo: Boolean! @method
+    
+    """
+    Check if the attachment requires a warning.
+    """
+    requiresWarning: Boolean! @method
+    
+    """
+    Get the thumbnail URL for image attachments.
+    """
+    thumbnailUrl(
+        """
+        The size of the thumbnail (small or medium).
+        """
+        size: String = "small"
+    ): String @method(name: "getThumbnailUrl")
+}
+
+extend type Query {
+    """
+    Get attachments for a message.
+    """
+    attachments(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The ID of the message.
+        """
+        messageId: ID!
+    ): [Attachment!]! @guard
+}
+
+extend type Mutation {
+    """
+    Send a message with attachments to a conversation.
+    """
+    sendMessageWithAttachments(
+        """
+        The UUID of the conversation.
+        """
+        uuid: ID!
+        
+        """
+        The content of the message.
+        """
+        content: String
+        
+        """
+        The ID of the parent message if this is a reply.
+        """
+        parentId: ID
+        
+        """
+        The attachments to upload.
+        """
+        attachments: [Upload!]!
+    ): Message @guard
+}
+
+"""
+A scalar representing JSON data.
+"""
+scalar JSON @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\JSON")
+
+"""
+A scalar representing an uploaded file.
+"""
+scalar Upload @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Upload")

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Socket.IO
 - Extensible hook system for customizing behavior without modifying core code
 - RESTful API endpoints for managing conversations and messages
+- GraphQL API support for managing conversations and messages
 - Multilingual support with translation capabilities
 - Customizable routes
 - Broadcasting events:
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - UserTyping
 - Comprehensive documentation:
   - API Documentation
+  - GraphQL API Documentation
   - Broadcasting Documentation
   - Hooks Documentation
   - Translations Documentation

@@ -124,6 +124,11 @@ class ConversationsServiceProvider extends ServiceProvider
             $this->registerRoutes();
         }
 
+        // Register GraphQL service provider if Lighthouse is installed
+        if (class_exists('Nuwave\Lighthouse\LighthouseServiceProvider')) {
+            $this->app->register(GraphQL\GraphQLServiceProvider::class);
+        }
+
         // Register required packages
         $this->registerRequiredPackages();
 	}
