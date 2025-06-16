@@ -1,3 +1,5 @@
+import React from 'react';
+
 /**
  * Represents a user in the conversation
  */
@@ -33,56 +35,43 @@ export interface Conversation {
 }
 
 /**
- * ConversationList component props
+ * Props for the ConversationList component
  */
 export interface ConversationListProps {
   /**
    * Array of conversation objects
    */
-  conversations: Conversation[];
-
+  conversations?: Conversation[];
+  
   /**
    * ID of the currently active conversation
    */
   activeConversationId?: string | null;
-
+  
   /**
    * Whether the conversations are currently loading
    */
   loading?: boolean;
-
+  
   /**
    * Text to display while loading
    */
   loadingText?: string;
-
+  
   /**
    * Text to display when there are no conversations
    */
   emptyText?: string;
-}
-
-/**
- * ConversationList component events
- */
-export interface ConversationListEvents {
+  
   /**
-   * Emitted when a conversation is selected
+   * Callback when a conversation is selected
    */
-  'select-conversation': (conversation: Conversation) => void;
+  onSelectConversation: (conversation: Conversation) => void;
 }
 
 /**
  * ConversationList component
  */
-declare const ConversationList: {
-  props: ConversationListProps;
-  emits: ConversationListEvents;
-
-  /**
-   * Select a conversation
-   */
-  selectConversation(conversation: Conversation): void;
-};
+declare const ConversationList: React.FC<ConversationListProps>;
 
 export default ConversationList;
