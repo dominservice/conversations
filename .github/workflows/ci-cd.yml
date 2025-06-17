@@ -21,6 +21,15 @@ jobs:
             laravel: 11.*
           - php: 8.1
             laravel: 12.*
+          # Exclude incompatible Laravel/Testbench combinations
+          - laravel: 11.*
+            php: 8.2
+          - laravel: 11.*
+            php: 8.3
+          - laravel: 12.*
+            php: 8.2
+          - laravel: 12.*
+            php: 8.3
 
     steps:
       - name: Checkout code
