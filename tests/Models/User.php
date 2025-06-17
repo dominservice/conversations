@@ -4,12 +4,10 @@ namespace Dominservice\Conversations\Tests\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Mockery\MockInterface;
 
-class User extends Authenticatable implements MockInterface
+class User extends Authenticatable
 {
     use HasFactory;
-    use \Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 
     /**
      * The attributes that are mass assignable.

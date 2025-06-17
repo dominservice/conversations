@@ -5,6 +5,14 @@ All notable changes to the Laravel Conversations package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.4] - 2024-06-18
+
+### Fixed
+- Fixed PHPUnit tests by removing incorrect MockInterface implementation from User test model:
+  - Removed MockInterface implementation that caused abstract method errors
+  - Removed unnecessary MockeryPHPUnitIntegration trait
+  - Ensured proper mocking in tests without direct interface implementation
+
 ## [3.1.3] - 2024-06-17
 
 ### Fixed
