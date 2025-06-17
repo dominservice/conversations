@@ -848,7 +848,12 @@ class Conversations
     public function broadcastUserTyping(string $conversationUuid, $userId = null, ?string $userName = null): void
     {
         if ($this->broadcastManager && $this->broadcastManager->enabled()) {
-            $userId = $userId ?? \Auth::user()->{\Auth::user()->getKeyName()};
+            if ($userId === null && \Auth::check()) {
+                $user = \Auth::user();
+                $userId = $user->{$user->getKeyName()};
+            } elseif ($userId === null) {
+                $userId = 'unknown';
+            }
             $this->broadcastManager->broadcast(new UserTyping($conversationUuid, $userId, $userName));
         }
     }

@@ -63,6 +63,9 @@ abstract class TestCase extends OrchestraTestCase
         $user = \Mockery::mock('Dominservice\Conversations\Tests\Models\User');
         $user->shouldReceive('getKeyName')->andReturn('id');
         $user->shouldReceive('getKeyType')->andReturn('int');
+        $user->shouldReceive('setAttribute')->andReturnSelf();
+        $user->shouldReceive('__get')->with('id')->andReturn($id);
+        $user->shouldReceive('__isset')->with('id')->andReturn(true);
         $user->id = $id;
 
         return $user;
@@ -101,5 +104,22 @@ abstract class TestCase extends OrchestraTestCase
         $app['config']->set('conversations.user_model', \Dominservice\Conversations\Tests\Models\User::class);
         $app['config']->set('conversations.user_primary_key_type', 'int');
         $app['config']->set('conversations.user_primary_key', 'id');
+
+        // Set up translatable config
+        $app['config']->set('translatable.locales', ['en', 'es', 'fr']);
+        $app['config']->set('translatable.locale', 'en');
+        $app['config']->set('translatable.fallback_locale', 'en');
+        $app['config']->set('app.fallback_locale', 'en');
+
+        // Set up auth config for API tests
+        $app['config']->set('auth.guards.api', [
+            'driver' => 'session',
+            'provider' => 'users',
+        ]);
+
+        $app['config']->set('auth.providers.users', [
+            'driver' => 'eloquent',
+            'model' => \Dominservice\Conversations\Tests\Models\User::class,
+        ]);
     }
 }

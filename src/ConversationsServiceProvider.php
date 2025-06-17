@@ -208,7 +208,7 @@ class ConversationsServiceProvider extends ServiceProvider
     protected function registerRequiredPackages()
     {
         // Check if Intervention/Image is installed
-        if (!class_exists('Intervention\Image\Facades\Image')) {
+        if (!class_exists('Intervention\Image\Laravel\Facades\Image') && !class_exists('Intervention\Image\Facades\Image')) {
             // We can't install packages programmatically, but we can show a warning
             if (PHP_SAPI === 'cli') {
                 // Use standard output for CLI since we don't have access to the components property
