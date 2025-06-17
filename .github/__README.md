@@ -10,9 +10,9 @@ The `workflows` directory contains GitHub Actions workflow files that automate t
 
 The main CI/CD workflow (`ci-cd.yml`) runs on push to main/master branches, on tag pushes, and on pull requests. It includes:
 
-1. **Tests**: Runs PHPUnit tests on multiple PHP versions (8.1, 8.2, 8.3) and Laravel versions (9.*, 10.*, 11.*).
-2. **Code Style**: Checks code against PSR-12 standards using PHP_CodeSniffer.
-3. **Static Analysis**: Runs PHPStan at level 5 to catch potential bugs and issues.
+1. **Tests**: Runs PHPUnit tests on multiple PHP versions (8.1, 8.2, 8.3) and Laravel versions (9.*, 10.*, 11.*, 12.*).
+2. **Code Style**: Checks code against standards defined in `phpcs.xml` using PHP_CodeSniffer.
+3. **Static Analysis**: Runs PHPStan with configuration from `phpstan.neon` to catch potential bugs and issues.
 4. **Release**: Creates a GitHub release when a tag is pushed (only if all previous jobs succeed).
 
 ## Configuration Files
