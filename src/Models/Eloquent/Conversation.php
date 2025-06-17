@@ -24,17 +24,18 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * Class Conversation
  * @package Dominservice\Conversations\Models\Eloquent
  */
-class Conversation  extends Model
+class Conversation extends Model
 {
-    use HasUuidPrimary, SoftDeletes;
+    use HasUuidPrimary;
+    use SoftDeletes;
 
-    const GROUP = 'group';
-    const COUPLE = 'couple';
+    public const GROUP = 'group';
+    public const COUPLE = 'couple';
 
-    const TYPE_SINGLE = 'single';
-    const TYPE_GROUP = 'group';
-    const TYPE_MAIL = 'mail';
-    const TYPE_SUPPORT = 'support';
+    public const TYPE_SINGLE = 'single';
+    public const TYPE_GROUP = 'group';
+    public const TYPE_MAIL = 'mail';
+    public const TYPE_SUPPORT = 'support';
 
     /**
      * The attributes that are mass assignable.
@@ -67,7 +68,8 @@ class Conversation  extends Model
 //        return ($date != null) ?  $date->format('Y-m-d H:i:s') : null;
 //    }
 
-    public function users() {
+    public function users()
+    {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
 
         return $this->belongsToMany(
@@ -80,7 +82,8 @@ class Conversation  extends Model
         );
     }
 
-    public function participants() {
+    public function participants()
+    {
         $userUuid = \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : '';
 
         return $this->users()->where(get_user_key(), '!=', $userUuid);
@@ -101,7 +104,6 @@ class Conversation  extends Model
         return $this->hasOne(ConversationType::class, 'id', 'type_id');
     }
 
-
     public function lastMessage()
     {
         return $this->hasOne(ConversationMessage::class, 'conversation_uuid', 'uuid');
@@ -112,25 +114,24 @@ class Conversation  extends Model
         return $this->hasOne(config('conversations.user_model'), 'uuid', 'owner_uuid');
     }
 
-    function getNumOfUsers()
+    public function getNumOfUsers()
     {
         return $this->users->count() ?? 0;
     }
 
-    function getNumOfMessages()
+    public function getNumOfMessages()
     {
         return $this->messages->count() ?? 0;
     }
 
-    function getTheOtherUser($userUuid = null)
+    public function getTheOtherUser($userUuid = null)
     {
         $userUuid = !$userUuid && \Auth::check() ? \Auth::user()->{\Auth::user()->getKeyName()} : $userUuid;
 
         return $this->users()->where(get_user_key(), '!=', $userUuid)->get();
-
     }
 
-    function getFirstMessage()
+    public function getFirstMessage()
     {
         return !empty($this->messages) ? $this->messages->first() : null;
     }
@@ -138,7 +139,7 @@ class Conversation  extends Model
     /**
      * @return ConversationMessage
      */
-    function getLastMessage()
+    public function getLastMessage()
     {
         return !empty($this->messages) ? $this->messages->last() : null;
     }
@@ -146,9 +147,11 @@ class Conversation  extends Model
     /**
      * @return mixed
      */
-    public function getType() {
-        if ( $this->getNumOfUsers() > 2 )
+    public function getType()
+    {
+        if ($this->getNumOfUsers() > 2) {
             return self::GROUP;
+        }
         return self::COUPLE;
     }
 

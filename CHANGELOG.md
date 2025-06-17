@@ -5,6 +5,25 @@ All notable changes to the Laravel Conversations package will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.7] - 2024-06-21
+
+### Fixed
+- Modified `registerRequiredPackages` function to skip dependency checks in GitHub Actions environment:
+  - Prevents warnings about missing Intervention/Image package during CI/CD tests
+  - Resolves issues with GitHub Actions failing due to dependency warnings
+  - Maintains warning functionality in non-CI environments
+
+## [3.1.6] - 2024-06-20
+
+### Fixed
+- Fixed code style issues to comply with PSR-12 standard:
+  - Added visibility declarations for constants and methods
+  - Fixed brace placement and indentation
+  - Removed trailing whitespace
+  - Fixed line length issues
+  - Separated trait imports
+  - Fixed header formatting
+
 ## [3.1.5] - 2024-06-19
 
 ### Fixed

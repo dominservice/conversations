@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Data Locale Parser
+ * Conversations
  *
  * This package will allow you to add a full user messaging system
  * into your Laravel application.
@@ -35,10 +35,10 @@ use Illuminate\Support\Str;
  */
 class Conversations
 {
-    const DELETED = 0;
-    const UNREAD = 1;
-    const READ = 2;
-    const ARCHIVED = 3;
+    public const DELETED = 0;
+    public const UNREAD = 1;
+    public const READ = 2;
+    public const ARCHIVED = 3;
 
     protected $messagesTable;
     protected $messagesStatusTable;
@@ -52,12 +52,13 @@ class Conversations
 
     /**
      * Conversations constructor.
-     * 
+     *
      * @param \Dominservice\Conversations\Broadcasting\BroadcastManager|null $broadcastManager
      */
-    public function __construct(BroadcastManager $broadcastManager = null) {
-        $this->messagesTable = DB::getTablePrefix() . (new ConversationMessage())->getTable();
-        $this->messagesStatusTable = DB::getTablePrefix() . (new ConversationMessageStatus())->getTable();
+    public function __construct(BroadcastManager $broadcastManager = null)
+    {
+        $this->messagesTable = DB::getTablePrefix() . (new ConversationMessage)->getTable();
+        $this->messagesStatusTable = DB::getTablePrefix() . (new ConversationMessageStatus)->getTable();
         $this->broadcastManager = $broadcastManager;
     }
 
