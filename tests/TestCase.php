@@ -40,10 +40,27 @@ abstract class TestCase extends OrchestraTestCase
      */
     protected function loadMigrationStubs()
     {
-        // For now, we'll skip loading the migration stubs
-        // This is a temporary fix to get the tests running
-        // The proper solution would be to create a mechanism to properly load the stubs
-        return;
+        // Get all migration stubs from the package
+        $migrationStubs = glob(__DIR__ . '/../database/migrations/*.stub');
+
+        // Create a temporary directory for migrations if it doesn't exist
+        $tempMigrationsDir = __DIR__ . '/temp_migrations';
+        if (!is_dir($tempMigrationsDir)) {
+            mkdir($tempMigrationsDir, 0755, true);
+        }
+
+        // Process each stub file
+        foreach ($migrationStubs as $stub) {
+            $filename = basename($stub, '.stub');
+            $timestamp = date('Y_m_d_His');
+            $targetFile = $tempMigrationsDir . '/' . $timestamp . '_' . $filename . '.php';
+
+            // Copy the stub to the temporary directory with a proper filename
+            copy($stub, $targetFile);
+        }
+
+        // Load the migrations from the temporary directory
+        $this->loadMigrationsFrom($tempMigrationsDir);
     }
 
     /**
