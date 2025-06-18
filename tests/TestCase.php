@@ -47,16 +47,51 @@ abstract class TestCase extends OrchestraTestCase
         $tempMigrationsDir = __DIR__ . '/temp_migrations';
         if (!is_dir($tempMigrationsDir)) {
             mkdir($tempMigrationsDir, 0755, true);
+        } else {
+            // Clean up old migration files
+            $oldFiles = glob($tempMigrationsDir . '/*.php');
+            foreach ($oldFiles as $file) {
+                unlink($file);
+            }
         }
 
-        // Process each stub file
-        foreach ($migrationStubs as $stub) {
-            $filename = basename($stub, '.stub');
-            $timestamp = date('Y_m_d_His');
-            $targetFile = $tempMigrationsDir . '/' . $timestamp . '_' . $filename . '.php';
+        // Process each stub file with proper timestamps to ensure correct order
+        $timestamp = date('Y_m_d_His');
+        $i = 0;
 
-            // Copy the stub to the temporary directory with a proper filename
-            copy($stub, $targetFile);
+        // First create the base tables
+        foreach (['create_conversations_tables', 'create_conversation_types_table', 'create_conversation_relations_table'] as $baseTable) {
+            foreach ($migrationStubs as $stub) {
+                if (strpos($stub, $baseTable) !== false) {
+                    $filename = basename($stub, '.stub');
+                    $incrementedTimestamp = date('Y_m_d_Hi') . str_pad($i++, 2, '0', STR_PAD_LEFT);
+                    $targetFile = $tempMigrationsDir . '/' . $incrementedTimestamp . '_' . $filename . '.php';
+
+                    // Read the stub content
+                    $content = file_get_contents($stub);
+
+                    // Write to the target file
+                    file_put_contents($targetFile, $content);
+                }
+            }
+        }
+
+        // Then add columns and updates
+        foreach ($migrationStubs as $stub) {
+            if (strpos($stub, 'create_conversations_tables') === false && 
+                strpos($stub, 'create_conversation_types_table') === false && 
+                strpos($stub, 'create_conversation_relations_table') === false) {
+
+                $filename = basename($stub, '.stub');
+                $incrementedTimestamp = date('Y_m_d_Hi') . str_pad($i++, 2, '0', STR_PAD_LEFT);
+                $targetFile = $tempMigrationsDir . '/' . $incrementedTimestamp . '_' . $filename . '.php';
+
+                // Read the stub content
+                $content = file_get_contents($stub);
+
+                // Write to the target file
+                file_put_contents($targetFile, $content);
+            }
         }
 
         // Load the migrations from the temporary directory
