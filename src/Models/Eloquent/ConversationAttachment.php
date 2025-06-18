@@ -25,11 +25,11 @@ use Illuminate\Support\Str;
  */
 class ConversationAttachment extends Model
 {
-    const TYPE_FILE = 'file';
-    const TYPE_IMAGE = 'image';
-    const TYPE_DOCUMENT = 'document';
-    const TYPE_AUDIO = 'audio';
-    const TYPE_VIDEO = 'video';
+    public const TYPE_FILE = 'file';
+    public const TYPE_IMAGE = 'image';
+    public const TYPE_DOCUMENT = 'document';
+    public const TYPE_AUDIO = 'audio';
+    public const TYPE_VIDEO = 'video';
 
     /**
      * The attributes that are mass assignable.
@@ -135,7 +135,8 @@ class ConversationAttachment extends Model
         }
 
         $pathInfo = pathinfo($this->path);
-        $thumbnailPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_' . $size . '.' . $pathInfo['extension'];
+        $thumbnailPath = $pathInfo['dirname'] . '/' . 
+            $pathInfo['filename'] . '_' . $size . '.' . $pathInfo['extension'];
 
         if (!Storage::disk(config('conversations.attachments.disk'))->exists($thumbnailPath)) {
             return null;
@@ -228,7 +229,8 @@ class ConversationAttachment extends Model
             Storage::disk(config('conversations.attachments.disk'))->delete($attachment->path);
 
             // Delete thumbnails if they exist
-            if ($attachment->type === self::TYPE_IMAGE && config('conversations.attachments.image.thumbnails.enabled')) {
+            if ($attachment->type === self::TYPE_IMAGE && 
+                config('conversations.attachments.image.thumbnails.enabled')) {
                 foreach (['small', 'medium'] as $size) {
                     $thumbnailPath = $attachment->getThumbnailPath($size);
                     if ($thumbnailPath) {

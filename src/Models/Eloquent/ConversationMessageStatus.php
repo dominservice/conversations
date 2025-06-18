@@ -34,14 +34,16 @@ class ConversationMessageStatus extends Model
         return config('conversations.tables.conversation_message_statuses');
     }
 
-    public function message() {
+    public function message()
+    {
         return $this->hasOne(ConversationMessage::class, 'id', 'message_id');
     }
 
     /**
      * Get the user that owns the message status.
      */
-    public function user() {
+    public function user()
+    {
         $userModel = config('conversations.user_model');
         $userKey = get_user_key();
 

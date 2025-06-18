@@ -15,7 +15,6 @@
 
 namespace Dominservice\Conversations\Models\Eloquent;
 
-
 use Dominservice\Conversations\Traits\ParentMorph;
 use Illuminate\Database\Eloquent\Model;
 
@@ -23,7 +22,7 @@ use Illuminate\Database\Eloquent\Model;
  * Class ConversationRelation
  * @package Dominservice\Conversations\Models\Eloquent
  */
-class ConversationRelation  extends Model
+class ConversationRelation extends Model
 {
     use ParentMorph;
 
@@ -62,4 +61,4 @@ class ConversationRelation  extends Model
     {
         return $this->morphTo('ulid_parent');
     }
-} 
+}

@@ -23,9 +23,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class ConversationMessage extends Model
 {
-    const TYPE_TEXT = 'text';
-    const TYPE_ANCHOR = 'anchor';
-    const TYPE_ATTACHMENT = 'attachment';
+    public const TYPE_TEXT = 'text';
+    public const TYPE_ANCHOR = 'anchor';
+    public const TYPE_ATTACHMENT = 'attachment';
 
     protected $dates = [
         'created_at', 'updated_at', 'edited_at'
@@ -60,7 +60,7 @@ class ConversationMessage extends Model
     {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
 
-        return $this->hasOne($userModel, (new $userModel)->getKeyType() === 'uuid' ? 'uuid' : 'id', get_sender_key());
+        return $this->hasOne($userModel, (new $userModel())->getKeyType() === 'uuid' ? 'uuid' : 'id', get_sender_key());
     }
 
     public function status()
