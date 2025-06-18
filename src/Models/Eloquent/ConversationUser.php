@@ -15,14 +15,13 @@
 
 namespace Dominservice\Conversations\Models\Eloquent;
 
-
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class ConversationUser
  * @package Dominservice\Conversations\Models\Eloquent
  */
-class ConversationUser  extends Model
+class ConversationUser extends Model
 {
     public $timestamps = false;
 
@@ -35,4 +34,4 @@ class ConversationUser  extends Model
     {
         return config('conversations.tables.conversation_users');
     }
-} 
+}

@@ -15,7 +15,6 @@
 
 namespace Dominservice\Conversations\Models\Eloquent;
 
-
 use Illuminate\Database\Eloquent\Model;
 
 /**

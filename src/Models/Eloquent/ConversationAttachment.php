@@ -136,7 +136,7 @@ class ConversationAttachment extends Model
 
         $pathInfo = pathinfo($this->path);
         $thumbnailPath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_' . $size . '.' . $pathInfo['extension'];
-        
+
         if (!Storage::disk(config('conversations.attachments.disk'))->exists($thumbnailPath)) {
             return null;
         }
