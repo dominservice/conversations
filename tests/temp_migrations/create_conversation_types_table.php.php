@@ -1,11 +1,24 @@
 <?php
 
+/**
+ * Conversations
+ *
+ * This package will allow you to add a full user messaging system
+ * into your Laravel application.
+ *
+ * @package   Dominservice\Conversations
+ * @author    DSO-IT Mateusz Domin <biuro@dso.biz.pl>
+ * @copyright (c) 2021 DSO-IT Mateusz Domin
+ * @license   MIT
+ * @version   3.0.0
+ */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateConversationTypesTable extends Migration
-{
+return new class extends Migration {
+
     /**
      * Run the migrations.
      *
@@ -16,7 +29,7 @@ class CreateConversationTypesTable extends Migration
         if (!Schema::hasTable(config('conversations.tables.conversation_types'))) {
             Schema::create(config('conversations.tables.conversation_types'), function (Blueprint $table) {
                 $table->id();
-                $table->string('name')->nullable();
+                $table->string('name');
                 $table->string('color', 10)->nullable();
                 $table->boolean('custom')->default(1);
                 $table->timestamps();
@@ -40,4 +53,5 @@ class CreateConversationTypesTable extends Migration
     {
         Schema::drop(config('conversations.tables.conversation_types'));
     }
-}
+
+};

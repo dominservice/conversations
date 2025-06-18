@@ -57,17 +57,20 @@ class ConversationMessage extends Model
         return ($date != null) ?  $date->format('Y-m-d H:i:s') : null;
     }
 
-    public function sender() {
+    public function sender()
+    {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
 
         return $this->hasOne($userModel, (new $userModel)->getKeyType() === 'uuid' ? 'uuid' : 'id', get_sender_key());
     }
 
-    public function status() {
+    public function status()
+    {
         return $this->hasMany(ConversationMessageStatus::class, 'message_id', 'id');
     }
 
-    public function statusForUser($userId = null) {
+    public function statusForUser($userId = null)
+    {
         $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
 
         if (!empty($this->status)) {

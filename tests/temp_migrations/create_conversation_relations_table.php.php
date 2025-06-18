@@ -1,0 +1,63 @@
+<?php
+
+/**
+ * Conversations
+ *
+ * This package will allow you to add a full user messaging system
+ * into your Laravel application.
+ *
+ * @package   Dominservice\Conversations
+ * @author    DSO-IT Mateusz Domin <biuro@dso.biz.pl>
+ * @copyright (c) 2021 DSO-IT Mateusz Domin
+ * @license   MIT
+ * @version   3.0.0
+ */
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        if( Schema::hasTable(config('conversations.tables.conversations')) && !Schema::hasTable(config('conversations.tables.conversation_relations')) ) {
+            Schema::create(config('conversations.tables.conversation_relations'), function (Blueprint $table) {
+                $table->uuid('conversation_uuid');
+                $table->foreign('conversation_uuid', 'con_rel')
+                    ->references('uuid')
+                    ->on(config('conversations.tables.conversations'))
+                    ->onDelete('cascade');
+                $table->nullableMorphs('parent');
+                $table->nullableUuidMorphs('uuid_parent');
+            });
+        }
+
+        Schema::table(config('conversations.tables.conversations'), function (Blueprint $table) {
+            $table->dropColumn('parent_id');
+            $table->dropColumn('parent_type');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        if( Schema::hasTable(config('conversations.tables.conversations')) && Schema::hasTable(config('conversations.tables.conversation_relations')) ) {
+            Schema::table(config('conversations.tables.conversations'), function (Blueprint $table) {
+                $table->unsignedBigInteger('parent_id');
+                $table->string('parent_type');
+            });
+            Schema::drop(config('conversations.tables.conversation_relations'));
+        }
+    }
+
+};

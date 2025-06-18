@@ -15,7 +15,6 @@
 
 namespace Dominservice\Conversations\Models\Eloquent;
 
-
 use Dominservice\Conversations\Traits\HasUuidPrimary;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
