@@ -42,7 +42,7 @@ class HookManager
      */
     protected static function executeClassMethod(string $hook, array $parameters = [])
     {
-        [$class, $method] = Arr::pad(explode('@', $hook, 2), 2, 'handle');
+        [$class, $method] = array_pad(explode('@', $hook, 2), 2, 'handle');
 
         if (! class_exists($class)) {
             return null;
@@ -64,7 +64,7 @@ class HookManager
     {
         $hooks = Config::get('conversations.hooks.' . $hookPoint, []);
         $hooks[] = $callback;
-        
+
         Config::set('conversations.hooks.' . $hookPoint, $hooks);
     }
 

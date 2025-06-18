@@ -66,6 +66,8 @@ abstract class TestCase extends OrchestraTestCase
         $user->shouldReceive('setAttribute')->andReturnSelf();
         $user->shouldReceive('__get')->with('id')->andReturn($id);
         $user->shouldReceive('__isset')->with('id')->andReturn(true);
+        $user->shouldReceive('getAttribute')->with('id')->andReturn($id);
+        $user->shouldReceive('getAttribute')->andReturn(null);
         $user->id = $id;
 
         return $user;

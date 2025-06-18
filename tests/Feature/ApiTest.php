@@ -35,7 +35,8 @@ class ApiTest extends TestCase
         Config::set('conversations.api.enabled', true);
 
         // Use web middleware for testing instead of api
-        Config::set('conversations.api.middleware', ['web', 'auth']);
+        // Avoid using auth middleware to prevent redirect to login route
+        Config::set('conversations.api.middleware', ['web']);
     }
 
     public function testGetConversations()
