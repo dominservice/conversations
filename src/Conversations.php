@@ -130,7 +130,14 @@ class Conversations
      * @param int|null $parentId
      * @return ConversationMessage|false|int
      */
-    public function addMessage($convUuid, $content, $addUser = false, $getObject = false, $attachments = [], $parentId = null)
+    public function addMessage(
+        $convUuid, 
+        $content, 
+        $addUser = false, 
+        $getObject = false, 
+        $attachments = [], 
+        $parentId = null
+    )
     {
         // Execute before_add_message hooks
         $hookResult = app('Dominservice\Conversations\Hooks\HookManager')->execute('before_add_message', [
@@ -175,7 +182,9 @@ class Conversations
             }
 
             // Set message type based on whether attachments are present
-            $message->message_type = !empty($attachments) ? ConversationMessage::TYPE_ATTACHMENT : ConversationMessage::TYPE_TEXT;
+            $message->message_type = !empty($attachments) 
+                ? ConversationMessage::TYPE_ATTACHMENT 
+                : ConversationMessage::TYPE_TEXT;
 
             $message->save();
 
@@ -256,7 +265,14 @@ class Conversations
      * @param int|null $parentId
      * @return ConversationMessage|false|int
      */
-    public function addMessageWithAttachments($convUuid, $content, array $attachments, $addUser = false, $getObject = false, $parentId = null)
+    public function addMessageWithAttachments(
+        $convUuid, 
+        $content, 
+        array $attachments, 
+        $addUser = false, 
+        $getObject = false, 
+        $parentId = null
+    )
     {
         return $this->addMessage($convUuid, $content, $addUser, $getObject, $attachments, $parentId);
     }

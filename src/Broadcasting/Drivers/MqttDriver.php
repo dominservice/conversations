@@ -49,7 +49,7 @@ class MqttDriver implements DriverInterface
         }
 
         $channels = $event->broadcastOn();
-        
+
         if (!is_array($channels)) {
             $channels = [$channels];
         }
@@ -62,7 +62,7 @@ class MqttDriver implements DriverInterface
             foreach ($channels as $channel) {
                 $channelName = $this->formatChannelName($channel);
                 $topic = "conversations/{$channelName}/{$eventName}";
-                
+
                 // Publish the event to the MQTT topic
                 $client->publish(
                     $topic,
@@ -107,7 +107,7 @@ class MqttDriver implements DriverInterface
     protected function formatChannelName($channel)
     {
         $name = $channel->name;
-        
+
         if ($channel instanceof PrivateChannel) {
             return 'private/' . $name;
         }
@@ -130,18 +130,18 @@ class MqttDriver implements DriverInterface
             $host = $this->config['host'] ?? 'localhost';
             $port = $this->config['port'] ?? 1883;
             $clientId = $this->config['client_id'] ?? 'laravel_conversations_' . uniqid();
-            
-            $connectionSettings = (new ConnectionSettings)
+
+            $connectionSettings = (new ConnectionSettings())
                 ->setConnectTimeout(60)
                 ->setSocketTimeout(30);
-            
+
             if (isset($this->config['username']) && isset($this->config['password'])) {
                 $connectionSettings
                     ->setUsername($this->config['username'])
                     ->setPassword($this->config['password']);
             }
-            
-            $this->client = new MqttClient($host, $port, $clientId);
+
+            $this->client = (new MqttClient($host, $port, $clientId));
             $this->client->connect($connectionSettings);
         }
 

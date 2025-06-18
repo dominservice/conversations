@@ -97,7 +97,14 @@ class MessagesController extends Controller
 
         // Use addMessageWithAttachments if attachments are present
         if (!empty($attachments)) {
-            $message = app('conversations')->addMessageWithAttachments($uuid, $content, $attachments, false, true, $parentId);
+            $message = app('conversations')->addMessageWithAttachments(
+                $uuid, 
+                $content, 
+                $attachments, 
+                false, 
+                true, 
+                $parentId
+            );
         } else {
             $message = app('conversations')->addMessage($uuid, $content, false, true, [], $parentId);
         }
@@ -628,7 +635,14 @@ class MessagesController extends Controller
         // Use replyToMessage method
         if (!empty($attachments)) {
             // For attachments, we need to use addMessageWithAttachments with parent_id
-            $message = app('conversations')->addMessageWithAttachments($uuid, $content, $attachments, false, true, $messageId);
+            $message = app('conversations')->addMessageWithAttachments(
+                $uuid, 
+                $content, 
+                $attachments, 
+                false, 
+                true, 
+                $messageId
+            );
         } else {
             $message = app('conversations')->replyToMessage($messageId, $content, true);
         }

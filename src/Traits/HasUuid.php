@@ -27,7 +27,8 @@ trait HasUuid
      *
      * @param  \Illuminate\Database\Schema\Builder $query The Query Builder instance.
      * @param  string                              $uuid  The UUID of the model.
-     * @param  bool|true                           $first Returns the model by default, or set to `false` to chain for query builder.
+     * @param  bool|true                           $first Returns the model by default, or set to `false` 
+     *                                                        to chain for query builder.
      * @return \Illuminate\Database\Eloquent\Model|\Illuminate\Database\Eloquent\Builder
      */
     public function scopeIdOrUuId($query, $id_or_uuid)

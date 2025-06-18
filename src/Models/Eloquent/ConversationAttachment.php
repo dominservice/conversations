@@ -135,7 +135,7 @@ class ConversationAttachment extends Model
         }
 
         $pathInfo = pathinfo($this->path);
-        $thumbnailPath = $pathInfo['dirname'] . '/' . 
+        $thumbnailPath = $pathInfo['dirname'] . '/' .
             $pathInfo['filename'] . '_' . $size . '.' . $pathInfo['extension'];
 
         if (!Storage::disk(config('conversations.attachments.disk'))->exists($thumbnailPath)) {
@@ -229,8 +229,10 @@ class ConversationAttachment extends Model
             Storage::disk(config('conversations.attachments.disk'))->delete($attachment->path);
 
             // Delete thumbnails if they exist
-            if ($attachment->type === self::TYPE_IMAGE && 
-                config('conversations.attachments.image.thumbnails.enabled')) {
+            if (
+                $attachment->type === self::TYPE_IMAGE &&
+                config('conversations.attachments.image.thumbnails.enabled')
+            ) {
                 foreach (['small', 'medium'] as $size) {
                     $thumbnailPath = $attachment->getThumbnailPath($size);
                     if ($thumbnailPath) {
