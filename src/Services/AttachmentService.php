@@ -20,7 +20,9 @@ use Dominservice\Conversations\Models\Eloquent\ConversationMessage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\Laravel\Facades\Image;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
+use Intervention\Image\ImageManager;
 
 class AttachmentService
 {
@@ -225,21 +227,14 @@ class AttachmentService
     {
         try {
             // Load the image
-            $image = Image::read($file);
+            $image = $this->createImageManager()->read($file);
             $originalWidth = $image->width();
             $originalHeight = $image->height();
 
             // Resize if needed
             $maxDimensions = config('conversations.attachments.image.max_dimensions', [1920, 1080]);
             if ($originalWidth > $maxDimensions[0] || $originalHeight > $maxDimensions[1]) {
-                $image = $image->resize(
-                    $maxDimensions[0], 
-                    $maxDimensions[1], 
-                    function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    }
-                );
+                $image = $image->scaleDown($maxDimensions[0], $maxDimensions[1]);
             }
 
             // Convert format if needed
@@ -320,14 +315,7 @@ class AttachmentService
             $thumbnailPath = substr($path, 0, strrpos($path, '.')) . '_' . $name . '.' . $extension;
 
             // Create a resized version of the image for the thumbnail
-            $thumbnail = $image->resize(
-                $dimensions[0], 
-                $dimensions[1], 
-                function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                }
-            );
+            $thumbnail = (clone $image)->scaleDown($dimensions[0], $dimensions[1]);
 
             // Create encoder based on extension
             $encoder = match ($extension) {
@@ -341,6 +329,32 @@ class AttachmentService
             // Save the encoded thumbnail
             $disk->put($thumbnailPath, $encoder->toString());
         }
+    }
+
+    /**
+     * Create image manager instance for Intervention Image v3.
+     *
+     * @return \Intervention\Image\ImageManager
+     */
+    protected function createImageManager()
+    {
+        $configuredDriver = config('conversations.attachments.image.driver');
+
+        if (!empty($configuredDriver)) {
+            $driver = $configuredDriver;
+
+            if (is_string($configuredDriver)) {
+                $driver = match (strtolower($configuredDriver)) {
+                    'gd' => GdDriver::class,
+                    'imagick' => ImagickDriver::class,
+                    default => $configuredDriver,
+                };
+            }
+
+            return new ImageManager($driver);
+        }
+
+        return new ImageManager(extension_loaded('imagick') ? ImagickDriver::class : GdDriver::class);
     }
 
     /**

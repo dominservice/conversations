@@ -31,8 +31,8 @@ return new class extends Migration {
         if (!Schema::hasTable(config('conversations.tables.conversations'))) {
             Schema::create(config('conversations.tables.conversations'), function (Blueprint $table) {
                 $table->uuid()->primary();
-                $table->unsignedBigInteger('parent_id');
-                $table->string('parent_type');
+                $table->unsignedBigInteger('parent_id')->nullable();
+                $table->string('parent_type')->nullable();
                 $table->timestamps();
                 $table->softDeletes();
             });
