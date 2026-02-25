@@ -232,6 +232,9 @@ return array(
             // Enable or disable image optimization
             'optimize' => true,
 
+            // Preferred image driver for Intervention Image (gd|imagick|null=auto)
+            'driver' => env('CONVERSATIONS_ATTACHMENTS_IMAGE_DRIVER'),
+
             // Maximum dimensions for images (width x height in pixels)
             'max_dimensions' => [1920, 1080],
 
