@@ -59,8 +59,13 @@ class ConversationMessage extends Model
     public function sender()
     {
         $userModel = \Config::get('conversations.user_model', \App\Models\User::class);
+        $model = new $userModel();
+        $ownerKey = (string) \Config::get('conversations.user_primary_key', $model->getKeyName());
+        if ($ownerKey === '') {
+            $ownerKey = $model->getKeyName();
+        }
 
-        return $this->hasOne($userModel, (new $userModel())->getKeyType() === 'uuid' ? 'uuid' : 'id', get_sender_key());
+        return $this->belongsTo($userModel, get_sender_key(), $ownerKey);
     }
 
     public function status()
@@ -70,11 +75,14 @@ class ConversationMessage extends Model
 
     public function statusForUser($userId = null)
     {
-        $userId = !$userId && \Auth::check() ? \Auth::user()->id : $userId;
+        if (!$userId && \Auth::check()) {
+            $authUser = \Auth::user();
+            $userId = $authUser?->{get_user_key()} ?? $authUser?->id;
+        }
 
         if (!empty($this->status)) {
             foreach ($this->status as $status) {
-                if ((int)$status->{get_user_key()} === (int)$userId) {
+                if ((string) $status->{get_user_key()} === (string) $userId) {
                     return $status;
                 }
             }

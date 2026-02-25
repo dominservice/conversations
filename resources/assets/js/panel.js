@@ -263,12 +263,24 @@ var Conversations = function () {
         return null;
     };
 
+    const resolveSenderId = (message) => {
+        return (
+            message?.sender_uuid
+            || message?.user_uuid
+            || message?.sender_id
+            || message?.user_id
+            || message?.sender?.uuid
+            || message?.sender?.id
+            || ''
+        ).toString();
+    };
+
     const normalizeMessage = (messageOrContent, createdAt, id, name, avatar, direction, attachments) => {
         if (typeof messageOrContent === 'object' && messageOrContent !== null) {
             const message = messageOrContent;
             const currentUserId = getUserIdentifier();
             const messageId = message.id || message.message_id;
-            const senderId = (message.sender_uuid || message.user_uuid || message.sender_id || message.user_id || message.sender?.uuid || message.sender?.id || '').toString();
+            const senderId = resolveSenderId(message);
             const senderMeta = resolveUserMeta(senderId);
             const computedDirection = senderId !== '' && senderId === currentUserId ? 'from' : 'to';
 
@@ -432,7 +444,7 @@ var Conversations = function () {
             return;
         }
 
-        const senderId = (message.sender_uuid || message.user_uuid || message.sender_id || message.user_id || message.sender?.uuid || message.sender?.id || '').toString();
+        const senderId = resolveSenderId(message);
         const senderMeta = resolveUserMeta(senderId);
         const currentUserId = getUserIdentifier();
         const senderLabel = senderId !== '' && senderId === currentUserId
@@ -459,13 +471,55 @@ var Conversations = function () {
             .catch(() => message);
     };
 
+    const unwrapEventPayload = (payload) => {
+        if (!payload || typeof payload !== 'object') {
+            return null;
+        }
+
+        if (payload.message && typeof payload.message === 'object') {
+            return payload.message;
+        }
+
+        if (payload.data && typeof payload.data === 'object') {
+            if (payload.data.message && typeof payload.data.message === 'object') {
+                return payload.data.message;
+            }
+
+            return payload.data;
+        }
+
+        return payload;
+    };
+
+    const resolveConversationUuidFromPayload = (payload) => {
+        return (
+            payload?.conversation_uuid
+            || payload?.conversationUuid
+            || payload?.conversation?.uuid
+            || payload?.conversation?.conversation_uuid
+            || ''
+        ).toString();
+    };
+
     const handleIncomingMessage = (message) => {
-        const payloadConversationUuid = (message?.conversation_uuid || message?.conversationUuid || '').toString();
-        if (!message || payloadConversationUuid !== conversationUuid) {
+        const eventMessage = unwrapEventPayload(message);
+        if (!eventMessage) {
             return;
         }
 
-        fetchMessageAttachments(message).then((resolvedMessage) => {
+        const payloadConversationUuid = resolveConversationUuidFromPayload(eventMessage)
+            || resolveConversationUuidFromPayload(message);
+
+        if (payloadConversationUuid !== conversationUuid) {
+            return;
+        }
+
+        const messageId = eventMessage.id || eventMessage.message_id || null;
+        if (messageId && $('.conversations-messages-item[data-message-id="' + messageId + '"]').length > 0) {
+            return;
+        }
+
+        fetchMessageAttachments(eventMessage).then((resolvedMessage) => {
             setMessage(containerConv, resolvedMessage, null, null, null, null, null, false, null, 'append');
             scrollToEnd();
             humanizeDate();
@@ -632,27 +686,37 @@ var Conversations = function () {
 
         conversationChannel.bind('message.sent', function (payload) {
             debugRealtime('event message.sent', payload);
-            const currentUserId = getUserIdentifier();
-            if ((payload.sender_id || payload.sender_uuid || payload.user_id || payload.user_uuid || '').toString() === currentUserId) {
+            const eventMessage = unwrapEventPayload(payload);
+            if (!eventMessage) {
                 return;
             }
-            handleIncomingMessage(payload);
+
+            const currentUserId = getUserIdentifier();
+            if (resolveSenderId(eventMessage) === currentUserId) {
+                return;
+            }
+
+            handleIncomingMessage(eventMessage);
         });
 
         conversationChannel.bind('message.deleted', function (payload) {
             debugRealtime('event message.deleted', payload);
-            if (payload.conversation_uuid === conversationUuid) {
-                $('.conversations-messages-item[data-message-id="' + payload.message_id + '"]').remove();
+            const eventPayload = unwrapEventPayload(payload) || {};
+            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload);
+            if (payloadConversationUuid === conversationUuid) {
+                $('.conversations-messages-item[data-message-id="' + (eventPayload.message_id || eventPayload.id) + '"]').remove();
             }
         });
 
         conversationChannel.bind('message.edited', function (payload) {
             debugRealtime('event message.edited', payload);
-            if (payload.conversation_uuid !== conversationUuid) {
+            const eventPayload = unwrapEventPayload(payload) || {};
+            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload);
+            if (payloadConversationUuid !== conversationUuid) {
                 return;
             }
 
-            const messageId = payload.message_id || payload.id || null;
+            const messageId = eventPayload.message_id || eventPayload.id || null;
             if (!messageId) {
                 return;
             }
@@ -662,9 +726,9 @@ var Conversations = function () {
                 return;
             }
 
-            const content = (payload.content || '').toString();
+            const content = (eventPayload.content || '').toString();
             messageEl.find('p').first().text(content);
-            const date = payload.created_at || payload.updated_at || null;
+            const date = eventPayload.created_at || eventPayload.updated_at || null;
             if (date) {
                 const dateEl = messageEl.find('.conversation-message-date').first();
                 dateEl.attr('data-message-date', date);
@@ -675,11 +739,13 @@ var Conversations = function () {
 
         conversationChannel.bind('message.read', function (payload) {
             debugRealtime('event message.read', payload);
-            if (payload.conversation_uuid !== conversationUuid) {
+            const eventPayload = unwrapEventPayload(payload) || {};
+            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload);
+            if (payloadConversationUuid !== conversationUuid) {
                 return;
             }
 
-            const listConversation = $('.conversations-list-items').find('[data-conversation-uuid="' + payload.conversation_uuid + '"]');
+            const listConversation = $('.conversations-list-items').find('[data-conversation-uuid="' + payloadConversationUuid + '"]');
             if (listConversation.length) {
                 listConversation.find('.conversation-count-new-messages').hide();
             }
@@ -687,12 +753,14 @@ var Conversations = function () {
 
         conversationChannel.bind('user.typing', function (payload) {
             debugRealtime('event user.typing', payload);
+            const eventPayload = unwrapEventPayload(payload) || {};
             const currentUserId = getUserIdentifier();
-            if ((payload.user_id || '').toString() === currentUserId || payload.conversation_uuid !== conversationUuid) {
+            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload);
+            if ((eventPayload.user_id || eventPayload.userId || '').toString() === currentUserId || payloadConversationUuid !== conversationUuid) {
                 return;
             }
 
-            const typingUserId = (payload.user_id || '').toString();
+            const typingUserId = (eventPayload.user_id || eventPayload.userId || '').toString();
             if (typingUsersTimers[typingUserId]) {
                 clearTimeout(typingUsersTimers[typingUserId]);
             }

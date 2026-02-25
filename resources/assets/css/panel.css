@@ -90,8 +90,7 @@
 }
 
 .conversations-panel .conversations-messages-item > div {
-    display: grid;
-    grid-template-columns: 34px 1fr;
+    display: flex;
     gap: 8px;
     align-items: start;
 }
@@ -107,14 +106,16 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+    min-width: 0;
+    flex: 1;
 }
 
 .conversations-panel .conversations-messages-item.replies > div > .conversation-message-body {
-    grid-column: 2;
+    order: 2;
 }
 
 .conversations-panel .conversations-messages-item.sent > div > .conversation-message-body {
-    grid-column: 1;
+    order: 1;
 }
 
 .conversations-panel .conversations-messages-item > div > .conversation-message-body > p {
@@ -132,7 +133,8 @@
 }
 
 .conversations-panel .conversations-messages-item.sent > div {
-    grid-template-columns: 1fr 34px;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
 }
 
 .conversations-panel .conversations-messages-item.sent > div > .conversation-message-body > p {
@@ -142,21 +144,25 @@
 
 .conversations-panel .conversations-messages-item.sent > div > img {
     order: 2;
+    flex: 0 0 34px;
 }
 
 .conversations-panel .conversations-messages-item.replies > div > img {
     order: 1;
+    flex: 0 0 34px;
 }
 
 .conversations-panel .conversation-message-date {
-    display: inline-block;
+    display: block;
+    clear: both;
+    margin-top: 4px;
     margin-left: 42px;
 }
 
 .conversations-panel .conversations-messages-item.sent .conversation-message-date {
     margin-left: 0;
     margin-right: 42px;
-    float: right;
+    text-align: right;
 }
 
 .conversations-panel .conv-composer {
