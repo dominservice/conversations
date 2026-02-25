@@ -72,6 +72,13 @@
     $currentConversationUuid = $currentConversation ? $resolveConversationUuid($currentConversation) : '';
     $panelCss = config('conversations.ui.assets.css');
     $panelJs = config('conversations.ui.assets.js');
+    $currentConversationOwnerId = (string) (
+        $currentConversation?->owner?->{$currentConversation?->owner?->getKeyName() ?? 'id'}
+        ?? $currentConversation?->owner?->uuid
+        ?? $currentConversation?->owner?->id
+        ?? ''
+    );
+    $canManageConversation = $currentConversationOwnerId !== '' && $currentConversationOwnerId === $authUserId;
 @endphp
 
 <link rel="stylesheet" href="{{ asset($panelCss) }}">
@@ -182,7 +189,7 @@
                             </p>
                         </div>
 
-                        @if($currentConversation->type?->name !== 'support' && (!$currentConversation->owner || $currentConversation->owner->uuid === request()->user()->uuid))
+                        @if($currentConversation->type?->name !== 'support' && $canManageConversation)
                             <span class="conversation-actions d-flex gap-1">
                                 <button class="btn btn-sm btn-outline-primary conversation-change-title" type="button" title="{{ __('Edit') }}">
                                     <i class="fa fa-edit"></i>
