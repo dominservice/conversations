@@ -172,10 +172,12 @@ class Conversations
                 }
             }
 
+            $normalizedContent = (string) ($content ?? '');
+
             $message = new ConversationMessage();
             $message->{get_sender_key()} = $userId;
             $message->conversation_uuid = $conversation->uuid;
-            $message->content = $content;
+            $message->content = $normalizedContent;
 
             // Set parent_id if this is a reply
             if (!is_null($parentId)) {
@@ -201,17 +203,24 @@ class Conversations
             $dataMessageStatuses = [];
 
             foreach ($usersInConv as $userInConv) {
-                if (!empty($userInConv->{\Auth::user()->getKeyName()})) {
+                $conversationUserId = $userInConv?->{$userInConv?->getKeyName() ?? 'id'}
+                    ?? $userInConv->uuid
+                    ?? $userInConv->id
+                    ?? null;
+                if (!empty($conversationUserId)) {
+                    $isSelf = (string) $conversationUserId === (string) $userId;
                     $dataMessageStatuses[] = [
-                        get_user_key() => $userInConv->{\Auth::user()->getKeyName()},
+                        get_user_key() => $conversationUserId,
                         'message_id' => $message->id,
-                        'self' => $userInConv->id == $userId ? 1 : 0,
-                        'status' => $userInConv->id == $userId ? self::READ : self::UNREAD,
+                        'self' => $isSelf ? 1 : 0,
+                        'status' => $isSelf ? self::READ : self::UNREAD,
                     ];
                 }
             }
 
-            \DB::table((new ConversationMessageStatus)->getTable())->insert($dataMessageStatuses);
+            if (!empty($dataMessageStatuses)) {
+                \DB::table((new ConversationMessageStatus)->getTable())->insert($dataMessageStatuses);
+            }
 
             // Broadcast the message sent event
             if ($this->broadcastManager && $this->broadcastManager->enabled()) {
@@ -623,6 +632,7 @@ class Conversations
         $output =  ConversationMessageStatus::select(
             DB::Raw("`{$this->messagesTable}`.`id` as `message_id`"),
             $messageT.'.content',
+            $messageT.'.message_type',
             $messageStatusT.'.status',
             $messageT.'.created_at',
             DB::Raw("`{$this->messagesTable}`.`".get_sender_key()."` as `".get_user_key()."`")
@@ -660,6 +670,7 @@ class Conversations
         $output = ConversationMessageStatus::select(
             DB::Raw("`{$this->messagesTable}`.`id` as `msg_id`"),
             $this->messagesTable.'.content',
+            $this->messagesTable.'.message_type',
             $this->messagesStatusTable.'.status',
             $this->messagesTable.'.created_at',
             DB::Raw("`{$this->messagesTable}`.`".get_sender_key()."` as `".get_user_key()."`")

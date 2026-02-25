@@ -103,7 +103,21 @@
     object-fit: cover;
 }
 
-.conversations-panel .conversations-messages-item > div > p {
+.conversations-panel .conversations-messages-item > div > .conversation-message-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.conversations-panel .conversations-messages-item.replies > div > .conversation-message-body {
+    grid-column: 2;
+}
+
+.conversations-panel .conversations-messages-item.sent > div > .conversation-message-body {
+    grid-column: 1;
+}
+
+.conversations-panel .conversations-messages-item > div > .conversation-message-body > p {
     margin: 0;
     padding: 9px 12px;
     border-radius: 12px;
@@ -121,7 +135,7 @@
     grid-template-columns: 1fr 34px;
 }
 
-.conversations-panel .conversations-messages-item.sent > div > p {
+.conversations-panel .conversations-messages-item.sent > div > .conversation-message-body > p {
     background: #dbeafe;
     border-color: #bfdbfe;
 }
@@ -205,4 +219,3 @@
         transform: translateX(0);
     }
 }
-

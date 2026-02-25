@@ -2,9 +2,11 @@
 
 namespace Dominservice\Conversations\Http\Controllers;
 
+use Dominservice\Conversations\Conversations;
 use Dominservice\Conversations\Models\Eloquent\ConversationMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Dominservice\Conversations\Facade\ConversationsHooks;
 
 class MessagesController extends Controller
@@ -38,7 +40,52 @@ class MessagesController extends Controller
         $limit = $request->input('limit');
         $start = $request->input('start');
 
+        $this->ensureMessageStatuses($uuid, $userId);
+
         $messages = app('conversations')->getMessages($uuid, $userId, $newToOld, $limit, $start);
+
+        $messageIds = collect($messages)
+            ->pluck('message_id')
+            ->filter()
+            ->map(static fn ($id) => (int) $id)
+            ->values();
+
+        $messagesById = ConversationMessage::query()
+            ->with(['sender', 'attachments'])
+            ->whereIn('id', $messageIds)
+            ->get()
+            ->keyBy('id');
+
+        $messages = collect($messages)->map(function ($message) use ($messagesById, $uuid) {
+            $messageId = (int) ($message->message_id ?? $message->id ?? 0);
+            $messageModel = $messagesById->get($messageId);
+            $sender = $messageModel?->sender;
+            $senderId = (string) (
+                $messageModel?->{get_sender_key()}
+                ?? $message->{get_user_key()}
+                ?? $message->sender_uuid
+                ?? $message->sender_id
+                ?? ''
+            );
+
+            return [
+                'id' => $messageId,
+                'message_id' => $messageId,
+                'conversation_uuid' => (string) $uuid,
+                'content' => (string) ($messageModel?->content ?? $message->content ?? ''),
+                'message_type' => (string) ($messageModel?->message_type ?? $message->message_type ?? 'text'),
+                'status' => $message->status ?? null,
+                'created_at' => $messageModel?->created_at?->format('Y-m-d H:i:s') ?? $message->created_at,
+                'sender_id' => $senderId,
+                'sender_uuid' => $senderId,
+                'user_id' => $senderId,
+                'user_uuid' => $senderId,
+                'sender_name' => $this->resolveUserName($sender),
+                'sender_avatar' => (string) ($sender?->avatar_path ?? ''),
+                'sender' => $this->normalizeSender($sender),
+                'attachments' => $messageModel?->attachments?->values()?->toArray() ?? [],
+            ];
+        })->values();
 
         // Execute hook after retrieving messages
         ConversationsHooks::execute('after_get_messages', [
@@ -50,6 +97,97 @@ class MessagesController extends Controller
         return response()->json([
             'data' => $messages,
         ]);
+    }
+
+    /**
+     * Normalize sender model to lightweight payload for frontend.
+     *
+     * @param mixed $sender
+     * @return array<string, mixed>|null
+     */
+    protected function normalizeSender($sender): ?array
+    {
+        if (!$sender) {
+            return null;
+        }
+
+        $senderId = (string) ($sender->{$sender->getKeyName()} ?? $sender->uuid ?? $sender->id ?? '');
+        $senderName = $this->resolveUserName($sender);
+
+        return [
+            'id' => $senderId,
+            'uuid' => (string) ($sender->uuid ?? $senderId),
+            'name' => $senderName,
+            'username' => (string) ($sender->username ?? ''),
+            'full_name' => (string) ($sender->full_name ?? $senderName),
+            'avatar_path' => (string) ($sender->avatar_path ?? ''),
+            'url' => (string) ($sender->url ?? ''),
+        ];
+    }
+
+    /**
+     * Resolve sender display name.
+     *
+     * @param mixed $sender
+     * @return string
+     */
+    protected function resolveUserName($sender): string
+    {
+        if (!$sender) {
+            return '';
+        }
+
+        if (method_exists($sender, 'getUsername')) {
+            return (string) $sender->getUsername();
+        }
+
+        return (string) ($sender->full_name ?? $sender->username ?? $sender->name ?? '');
+    }
+
+    /**
+     * Ensure message status rows exist for the current user.
+     * This recovers legacy conversations created before status rows were inserted correctly.
+     *
+     * @param string $conversationUuid
+     * @param string|int $userId
+     * @return void
+     */
+    protected function ensureMessageStatuses(string $conversationUuid, $userId): void
+    {
+        $messagesTable = config('conversations.tables.conversation_messages');
+        $statusesTable = config('conversations.tables.conversation_message_statuses');
+        $senderKey = get_sender_key();
+        $userKey = get_user_key();
+        $currentUserId = (string) $userId;
+
+        $missingStatuses = DB::table($messagesTable . ' as m')
+            ->leftJoin($statusesTable . ' as s', function ($join) use ($userKey, $currentUserId) {
+                $join->on('s.message_id', '=', 'm.id')
+                    ->where('s.' . $userKey, '=', $currentUserId);
+            })
+            ->where('m.conversation_uuid', $conversationUuid)
+            ->whereNull('s.message_id')
+            ->select(['m.id as message_id', 'm.' . $senderKey . ' as sender_id'])
+            ->get();
+
+        if ($missingStatuses->isEmpty()) {
+            return;
+        }
+
+        $payload = [];
+        foreach ($missingStatuses as $status) {
+            $isSelf = (string) ($status->sender_id ?? '') === $currentUserId;
+            $payload[] = [
+                $userKey => $currentUserId,
+                'message_id' => (int) $status->message_id,
+                'self' => $isSelf ? 1 : 0,
+                'status' => $isSelf ? Conversations::READ : Conversations::UNREAD,
+            ];
+        }
+
+        if (!empty($payload)) {
+            DB::table($statusesTable)->insertOrIgnore($payload);
+        }
     }
 
     /**

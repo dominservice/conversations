@@ -65,6 +65,19 @@ class ConversationAttachment extends Model
     ];
 
     /**
+     * Additional attributes exposed in JSON responses.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = [
+        'url',
+        'human_size',
+        'thumbnail_small_url',
+        'thumbnail_medium_url',
+        'requires_warning',
+    ];
+
+    /**
      * Get the table associated with the model.
      *
      * @return string
@@ -215,6 +228,30 @@ class ConversationAttachment extends Model
         }
 
         return round($bytes, 2) . ' ' . $units[$i];
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getThumbnailSmallUrlAttribute()
+    {
+        return $this->getThumbnailUrl('small');
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getThumbnailMediumUrlAttribute()
+    {
+        return $this->getThumbnailUrl('medium');
+    }
+
+    /**
+     * @return bool
+     */
+    public function getRequiresWarningAttribute()
+    {
+        return $this->requiresWarning();
     }
 
     /**

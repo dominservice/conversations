@@ -294,6 +294,33 @@ var Conversations = function () {
         };
     };
 
+    const buildAttachmentsHtml = (attachments) => {
+        if (!Array.isArray(attachments) || attachments.length === 0) {
+            return '';
+        }
+
+        let html = '<div class="conversation-message-attachments mt-2">';
+        attachments.forEach((attachment) => {
+            const url = attachment.url || '#';
+            const fileName = attachment.original_filename || attachment.filename || 'attachment';
+            const isImage = (attachment.type || '').toString() === 'image';
+            const thumb = attachment.thumbnail_small_url || attachment.thumbnail_medium_url || url;
+
+            if (isImage) {
+                html += '<a href="' + url + '" target="_blank" rel="noopener" class="d-inline-block me-2 mb-1">' +
+                    '<img src="' + thumb + '" alt="' + fileName + '" style="max-width:120px;max-height:120px;border-radius:8px;">' +
+                    '</a>';
+            } else {
+                html += '<a href="' + url + '" target="_blank" rel="noopener" class="d-inline-flex align-items-center me-2 mb-1">' +
+                    '<i class="fa fa-file me-1"></i>' + fileName +
+                    '</a>';
+            }
+        });
+        html += '</div>';
+
+        return html;
+    };
+
     const setMessage = (container, messageOrContent, createdAt, id, name, avatar, direction, isLoadMessages, attachments, insertMode) => {
         const messagesEl = containerMessages ? $(containerMessages) : $(container).find('.conversations-messages-items');
         const message = normalizeMessage(messageOrContent, createdAt, id, name, avatar, direction, attachments);
@@ -306,6 +333,9 @@ var Conversations = function () {
             return;
         }
 
+        const hasContent = message.content.trim() !== '';
+        const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
+
         let html = typeof addMessageCallback !== 'undefined'
             ? addMessageCallback(
                 message.content,
@@ -317,7 +347,20 @@ var Conversations = function () {
                 isLoadMessages,
                 message.attachments
             )
-            : '<li class="conversations-messages-item ' + (message.direction === 'from' ? 'sent' : 'replies') + '" data-message-id="' + message.id + '"><div><img src="' + message.avatar + '" alt="' + message.name + '" /><p>' + message.content + '</p></div></li>';
+            : (function () {
+                if (!hasContent && !hasAttachments) {
+                    return false;
+                }
+
+                const bodyHtml = (hasContent ? '<p>' + message.content + '</p>' : '') + buildAttachmentsHtml(message.attachments);
+
+                return '<li class="conversations-messages-item ' + (message.direction === 'from' ? 'sent' : 'replies') + '" data-message-id="' + message.id + '">' +
+                    '<div>' +
+                    '<img src="' + message.avatar + '" alt="' + message.name + '" />' +
+                    '<div class="conversation-message-body">' + bodyHtml + '</div>' +
+                    '</div>' +
+                    '</li>';
+            })();
 
         if (html === false) {
             return;
@@ -417,7 +460,8 @@ var Conversations = function () {
     };
 
     const handleIncomingMessage = (message) => {
-        if (!message || message.conversation_uuid !== conversationUuid) {
+        const payloadConversationUuid = (message?.conversation_uuid || message?.conversationUuid || '').toString();
+        if (!message || payloadConversationUuid !== conversationUuid) {
             return;
         }
 

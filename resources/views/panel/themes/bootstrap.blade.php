@@ -298,11 +298,12 @@
                     attachmentsHtml += '</div>';
                 }
 
+                const bodyHtml = (hasContent ? '<p>' + content + '</p>' : '') + attachmentsHtml;
+
                 let html = '<li class="conversations-messages-item ' + (direction === 'from' ? 'sent' : 'replies') + '" data-message-id="' + id + '">' +
                     '<div>' +
                     '<img src="' + avatar + '" alt="' + name + '" title="' + name + '" />' +
-                    '<p>' + (hasContent ? content : '') + '</p>' +
-                    attachmentsHtml +
+                    '<div class="conversation-message-body">' + bodyHtml + '</div>' +
                     '</div>' +
                     '<div class="clearfix"></div>';
                 if (direction === 'from') {
