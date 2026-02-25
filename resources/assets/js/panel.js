@@ -27,9 +27,11 @@ var Conversations = function () {
     let typingUsersTimers = {};
     let messagesRequestInFlight = false;
     let messagesRefreshQueued = false;
+    let messageSyncIntervalId = null;
     let texts = {};
 
     const MESSAGE_BATCH_SIZE = 20;
+    const MESSAGE_SYNC_INTERVAL_MS = 4000;
     const DEFAULT_AVATAR = '/assets/theme/media/logos/empty-user.webp';
 
     const normalizeAvatarPath = (avatarPath) => {
@@ -528,6 +530,58 @@ var Conversations = function () {
         });
     };
 
+    const syncLatestMessages = () => {
+        if (!getMessagesRoute || !conversationUuid || messagesRequestInFlight) {
+            return;
+        }
+
+        axios.get(getMessagesRoute, {
+            headers: getAuthHeaders(),
+            params: {
+                order: 'desc',
+                limit: MESSAGE_BATCH_SIZE,
+                start: 0,
+            },
+        }).then((response) => {
+            const payload = response?.data || {};
+            const items = Array.isArray(payload.data) ? payload.data.slice().reverse() : [];
+
+            let appended = false;
+            items.forEach((message) => {
+                const messageId = message?.id || message?.message_id || null;
+                if (!messageId) {
+                    return;
+                }
+
+                if ($('.conversations-messages-item[data-message-id="' + messageId + '"]').length > 0) {
+                    return;
+                }
+
+                setMessage(containerConv, message, null, null, null, null, null, false, null, 'append');
+                appended = true;
+            });
+
+            if (appended) {
+                scrollToEnd();
+                humanizeDate();
+                markAsRead(null);
+            }
+        }).catch(() => {});
+    };
+
+    const startMessageSyncFallback = () => {
+        if (messageSyncIntervalId) {
+            clearInterval(messageSyncIntervalId);
+            messageSyncIntervalId = null;
+        }
+
+        if (!conversationUuid || !getMessagesRoute) {
+            return;
+        }
+
+        messageSyncIntervalId = setInterval(syncLatestMessages, MESSAGE_SYNC_INTERVAL_MS);
+    };
+
     const loadMessages = (isFirstLoad, resetPagination) => {
         if (!getMessagesRoute) {
             return;
@@ -647,6 +701,7 @@ var Conversations = function () {
         const connectionName = (realtimeConfig.connection || '').toString().toLowerCase();
         if (!realtimeConfig.key || ['null', 'log', 'redis'].includes(connectionName)) {
             console.warn('Conversations realtime disabled.', realtimeConfig);
+            startMessageSyncFallback();
             return;
         }
 
@@ -657,10 +712,12 @@ var Conversations = function () {
             }
         } catch (error) {
             console.error('Realtime initialization failed:', error);
+            startMessageSyncFallback();
             return;
         }
 
         if (!pusher) {
+            startMessageSyncFallback();
             return;
         }
 
@@ -677,6 +734,7 @@ var Conversations = function () {
         }
 
         if (!conversationUuid) {
+            startMessageSyncFallback();
             return;
         }
 
@@ -772,6 +830,8 @@ var Conversations = function () {
 
             renderTypingIndicator();
         });
+
+        startMessageSyncFallback();
     };
 
     const createModalContacts = (submitUrl, submitLabel, isUpdate, callback) => {
