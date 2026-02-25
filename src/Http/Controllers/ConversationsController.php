@@ -85,7 +85,10 @@ class ConversationsController extends Controller
                     : (string) ($user->username ?? $user->name ?? '@user'),
                 'full_name' => (string) ($user->full_name ?? $user->name ?? ''),
                 'name' => (string) ($user->full_name ?? $user->name ?? ''),
-                'avatar_path' => (string) ($user->avatar_path ?? config('global.empty_user_avatar') ?? '/assets/theme/media/logos/empty-user.webp'),
+                'avatar_path' => $this->normalizeAssetPath(
+                    (string) ($user->avatar_path ?? ''),
+                    (string) (config('global.empty_user_avatar') ?? '/assets/theme/media/logos/empty-user.webp')
+                ),
                 'url' => (string) ($user->url ?? '#'),
             ];
         })->values()->all();
@@ -212,6 +215,34 @@ class ConversationsController extends Controller
             ],
             'message' => trans('conversations::conversations.conversation.created'),
         ], $created ? 201 : 200);
+    }
+
+    /**
+     * Normalize relative/absolute asset path to browser-safe URL.
+     *
+     * @param string|null $path
+     * @param string|null $fallback
+     * @return string
+     */
+    protected function normalizeAssetPath(?string $path, ?string $fallback = null): string
+    {
+        $value = trim((string) $path);
+        if ($value === '') {
+            $value = trim((string) $fallback);
+        }
+        if ($value === '') {
+            $value = '/assets/theme/media/logos/empty-user.webp';
+        }
+
+        if (preg_match('~^(https?:)?//~i', $value) === 1 || str_starts_with($value, 'data:') || str_starts_with($value, 'blob:')) {
+            return $value;
+        }
+
+        if (str_starts_with($value, '/')) {
+            return $value;
+        }
+
+        return asset($value);
     }
 
     /**

@@ -32,6 +32,23 @@ var Conversations = function () {
     const MESSAGE_BATCH_SIZE = 20;
     const DEFAULT_AVATAR = '/assets/theme/media/logos/empty-user.webp';
 
+    const normalizeAvatarPath = (avatarPath) => {
+        const value = (avatarPath || '').toString().trim();
+        if (value === '') {
+            return DEFAULT_AVATAR;
+        }
+
+        if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')) {
+            return value;
+        }
+
+        if (value.startsWith('/')) {
+            return value;
+        }
+
+        return '/' + value.replace(/^\/+/, '');
+    };
+
     const resolveDSO = () => {
         if (typeof window !== 'undefined' && window.DSO) {
             return window.DSO;
@@ -94,8 +111,18 @@ var Conversations = function () {
         if (typeof params.conversation_uuid !== 'undefined') { conversationUuid = params.conversation_uuid; }
         if (typeof params.add_message_callback !== 'undefined') { addMessageCallback = params.add_message_callback; }
         if (typeof params.attachment_input_selector !== 'undefined') { attachmentInputSelector = params.attachment_input_selector; }
-        if (typeof params.participants_map !== 'undefined') { participantsMap = params.participants_map || {}; }
-        if (typeof params.current_user !== 'undefined') { currentUser = params.current_user || {}; }
+        if (typeof params.participants_map !== 'undefined') {
+            participantsMap = params.participants_map || {};
+            Object.keys(participantsMap).forEach((key) => {
+                if (participantsMap[key]) {
+                    participantsMap[key].avatar_path = normalizeAvatarPath(participantsMap[key].avatar_path);
+                }
+            });
+        }
+        if (typeof params.current_user !== 'undefined') {
+            currentUser = params.current_user || {};
+            currentUser.avatar_path = normalizeAvatarPath(currentUser.avatar_path);
+        }
         if (typeof params.texts !== 'undefined') { texts = params.texts || {}; }
     };
 
@@ -250,7 +277,7 @@ var Conversations = function () {
                 content: (message.content || '').toString(),
                 created_at: message.created_at || message.createdAt,
                 name: message.sender_name || message.sender?.full_name || message.sender?.username || message.sender?.name || senderMeta?.full_name || senderMeta?.username || senderMeta?.name || '@user',
-                avatar: message.sender_avatar || message.sender?.avatar_path || message.sender?.avatar || senderMeta?.avatar_path || senderMeta?.avatar || DEFAULT_AVATAR,
+                avatar: normalizeAvatarPath(message.sender_avatar || message.sender?.avatar_path || message.sender?.avatar || senderMeta?.avatar_path || senderMeta?.avatar || DEFAULT_AVATAR),
                 direction: direction || computedDirection,
                 attachments: normalizeAttachments(message.attachments || []),
             };
@@ -261,7 +288,7 @@ var Conversations = function () {
             content: (messageOrContent || '').toString(),
             created_at: createdAt,
             name: name,
-            avatar: avatar,
+            avatar: normalizeAvatarPath(avatar),
             direction: direction,
             attachments: normalizeAttachments(attachments || []),
         };
@@ -666,7 +693,7 @@ var Conversations = function () {
                 html += '<table class="table table-sm align-middle"><tbody>';
                 $.each(renderContacts, function (_k, contact) {
                     html += '<tr><td style="width:32px"><input class="form-check-input" type="checkbox" name="contact_uuid[]" value="' + contact.uuid + '"></td>';
-                    html += '<td><img alt="@' + contact.username + '" class="img-thumbnail me-2" src="' + (contact.avatar_path || DEFAULT_AVATAR) + '" width="40"> <a href="' + (contact.url || '#') + '" target="_blank">@' + contact.username + '</a></td></tr>';
+                    html += '<td><img alt="@' + contact.username + '" class="img-thumbnail me-2" src="' + normalizeAvatarPath(contact.avatar_path || DEFAULT_AVATAR) + '" width="40"> <a href="' + (contact.url || '#') + '" target="_blank">@' + contact.username + '</a></td></tr>';
                 });
                 html += '</tbody></table>';
             } else {
@@ -776,11 +803,12 @@ var Conversations = function () {
 
                     notify(response.data.message || t('Saved', 'Saved'), 'success');
                     $.each(selected, function (_k, contact) {
-                        $('.conversation-participants').append('<a href="' + (contact.url || '#') + '" target="_blank" data-participant-uuid="' + contact.uuid + '"><img src="' + (contact.avatar_path || DEFAULT_AVATAR) + '" alt="@' + contact.username + '" title="@' + contact.username + '" /></a>');
+                        const contactAvatar = normalizeAvatarPath(contact.avatar_path || DEFAULT_AVATAR);
+                        $('.conversation-participants').append('<a href="' + (contact.url || '#') + '" target="_blank" data-participant-uuid="' + contact.uuid + '"><img src="' + contactAvatar + '" alt="@' + contact.username + '" title="@' + contact.username + '" /></a>');
                         participantsMap[contact.uuid] = {
                             uuid: contact.uuid,
                             username: '@' + contact.username,
-                            avatar_path: contact.avatar_path || DEFAULT_AVATAR,
+                            avatar_path: contactAvatar,
                             full_name: contact.full_name || contact.username,
                         };
                     });
@@ -909,4 +937,3 @@ var Conversations = function () {
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = Conversations;
 }
-

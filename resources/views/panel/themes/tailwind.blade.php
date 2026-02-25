@@ -1,5 +1,65 @@
 @php
-    $currentConversationPrimaryParticipant = $currentConversation?->participants?->first();
+    $authUser = request()->user();
+    $authUserId = (string) ($authUser?->{$authUser?->getKeyName() ?? 'id'} ?? $authUser?->uuid ?? $authUser?->id ?? '');
+
+    $normalizeAssetUrl = static function (?string $path, ?string $fallback = null): string {
+        $value = trim((string) $path);
+        if ($value === '') {
+            $value = trim((string) $fallback);
+        }
+
+        if ($value === '') {
+            $value = '/assets/theme/media/logos/empty-user.webp';
+        }
+
+        if (preg_match('~^(https?:)?//~i', $value) === 1 || str_starts_with($value, 'data:') || str_starts_with($value, 'blob:')) {
+            return $value;
+        }
+
+        if (str_starts_with($value, '/')) {
+            return $value;
+        }
+
+        return asset($value);
+    };
+
+    $defaultAvatarUrl = $normalizeAssetUrl((string) config('global.empty_user_avatar'), '/assets/theme/media/logos/empty-user.webp');
+
+    $resolveConversationParticipant = static function ($conversation) use ($authUserId) {
+        $users = collect($conversation->users ?? []);
+        if ($users->isEmpty()) {
+            $users = collect($conversation->participants ?? []);
+        }
+
+        $participant = $users->first(function ($user) use ($authUserId) {
+            $id = (string) ($user?->{$user?->getKeyName() ?? 'id'} ?? $user->uuid ?? $user->id ?? '');
+            return $id !== '' && $id !== $authUserId;
+        });
+
+        return $participant ?: $users->first();
+    };
+
+    $resolveConversationUserName = static function ($user): string {
+        if (!$user) {
+            return '';
+        }
+
+        if (method_exists($user, 'getUsername')) {
+            return (string) $user->getUsername();
+        }
+
+        return (string) ($user->username ?? $user->full_name ?? $user->name ?? '');
+    };
+
+    $resolveConversationAvatar = static function ($user) use ($normalizeAssetUrl, $defaultAvatarUrl): string {
+        if ($user && !empty($user->avatar_path)) {
+            return $normalizeAssetUrl((string) $user->avatar_path, $defaultAvatarUrl);
+        }
+
+        return $defaultAvatarUrl;
+    };
+
+    $currentConversationPrimaryParticipant = $currentConversation ? $resolveConversationParticipant($currentConversation) : null;
     $panelCss = config('conversations.ui.assets.css');
     $panelJs = config('conversations.ui.assets.js');
 @endphp
@@ -23,12 +83,13 @@
                 <ul class="list-unstyled mb-0">
                     @foreach($conversations as $conversation)
                         @php
-                            $conversationPrimaryParticipant = $conversation->participants->first();
+                            $conversationPrimaryParticipant = $resolveConversationParticipant($conversation);
                             $conversationTitle = (string) ($conversation->title ?? '');
+                            $conversationPrimaryParticipantName = $resolveConversationUserName($conversationPrimaryParticipant);
                             $conversationName = match ($conversation->type?->name) {
                                 'group' => __('Group conversation'),
                                 'support' => __('Support'),
-                                default => ($conversationPrimaryParticipant?->getUsername() ?? __('User deleted')),
+                                default => ($conversationPrimaryParticipantName !== '' ? $conversationPrimaryParticipantName : ($conversationTitle !== '' ? $conversationTitle : __('Conversation'))),
                             };
                             $previewText = trim((string) ($conversation?->lastMessage?->content ?? ''));
                         @endphp
@@ -41,7 +102,7 @@
                                 @if($conversation->type?->name === 'group')
                                     <img src="{{ asset('assets/theme/media/group.webp') }}" class="rounded-full conv-avatar" alt="{{ $conversationName }}">
                                 @else
-                                    <img src="{{ $conversationPrimaryParticipant?->avatar_path ?? config('global.empty_user_avatar') }}" class="rounded-full conv-avatar" alt="{{ $conversationName }}">
+                                    <img src="{{ $resolveConversationAvatar($conversationPrimaryParticipant) }}" class="rounded-full conv-avatar" alt="{{ $conversationName }}">
                                 @endif
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center justify-between gap-2">
@@ -53,10 +114,14 @@
                                         <p class="title m-0 text-xs text-slate-500 truncate">{{ $conversationTitle }}</p>
                                     @endif
                                     <p class="preview m-0 text-xs text-slate-500 truncate">
-                                        @if($conversation?->lastMessage?->sender?->uuid === request()->user()->uuid)
+                                        @php
+                                            $lastMessageSender = $conversation?->lastMessage?->sender;
+                                            $lastMessageSenderId = (string) ($lastMessageSender?->{$lastMessageSender?->getKeyName() ?? 'id'} ?? $lastMessageSender?->uuid ?? $lastMessageSender?->id ?? '');
+                                        @endphp
+                                        @if($lastMessageSenderId !== '' && $lastMessageSenderId === $authUserId)
                                             <span>{{ __('You') }}:</span>
-                                        @elseif($conversation?->lastMessage?->sender)
-                                            <span>{{ $conversation?->lastMessage?->sender?->getUsername() }}:</span>
+                                        @elseif($lastMessageSender)
+                                            <span>{{ $resolveConversationUserName($lastMessageSender) ?: '@user' }}:</span>
                                         @endif
                                         {{ Str::limit($previewText, 60) }}
                                     </p>
@@ -76,14 +141,14 @@
                         <span class="conversation-participants inline-flex items-center">
                             @foreach($currentConversation->participants as $participant)
                                 <a href="{{ $participant->url ?? '#' }}" target="_blank" data-participant-uuid="{{ $participant->uuid }}">
-                                    <img src="{{ $participant->avatar_path ?? config('global.empty_user_avatar') }}" alt="{{ $participant->getUsername() ?? '@user' }}">
+                                    <img src="{{ $resolveConversationAvatar($participant) }}" alt="{{ $resolveConversationUserName($participant) ?: '@user' }}">
                                 </a>
                             @endforeach
                         </span>
                         <div class="flex-1 min-w-0">
                             <p class="m-0 truncate text-sm font-semibold">
                                 @if(in_array($currentConversation->type?->name, ['single', 'expert', 'cooperation'], true))
-                                    {{ $currentConversationPrimaryParticipant?->getUsername() ?? __('User deleted') }}
+                                    {{ $resolveConversationUserName($currentConversationPrimaryParticipant) ?: ($currentConversation->title ?: __('Conversation')) }}
                                 @elseif($currentConversation->type?->name === 'support')
                                     {{ __('Support') }}
                                 @else
@@ -162,4 +227,3 @@
         });
     })();
 </script>
-
