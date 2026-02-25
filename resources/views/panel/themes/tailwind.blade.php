@@ -60,7 +60,12 @@
     };
 
     $resolveConversationUuid = static function ($conversation): string {
-        return (string) ($conversation->uuid ?? $conversation->conversation_uuid ?? $conversation->id ?? '');
+        $value = data_get($conversation, 'uuid')
+            ?? data_get($conversation, 'conversation_uuid')
+            ?? data_get($conversation, 'id')
+            ?? data_get($conversation, 'pivot.conversation_uuid');
+
+        return (string) ($value ?? '');
     };
 
     $currentConversationPrimaryParticipant = $currentConversation ? $resolveConversationParticipant($currentConversation) : null;

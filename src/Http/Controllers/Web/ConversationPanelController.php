@@ -42,6 +42,13 @@ class ConversationPanelController extends Controller
                     return $this->resolveConversationUuid($conversation) === (string) $uuid;
                 });
             }
+            if (!$currentConversation) {
+                $directConversation = app('conversations')->get($uuid);
+                if ($directConversation && app('conversations')->existsUser($uuid, $userId)) {
+                    $directConversation->loadMissing(['type', 'owner', 'participants', 'users', 'lastMessage.sender']);
+                    $currentConversation = $directConversation;
+                }
+            }
         }
         if (!$currentConversation) {
             $currentConversation = $conversations->first();
@@ -476,7 +483,12 @@ class ConversationPanelController extends Controller
      */
     protected function resolveConversationUuid($conversation): string
     {
-        return (string) ($conversation->uuid ?? $conversation->conversation_uuid ?? $conversation->id ?? '');
+        $value = data_get($conversation, 'uuid')
+            ?? data_get($conversation, 'conversation_uuid')
+            ?? data_get($conversation, 'id')
+            ?? data_get($conversation, 'pivot.conversation_uuid');
+
+        return (string) ($value ?? '');
     }
 
     /**
