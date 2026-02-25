@@ -35,6 +35,68 @@ class ConversationsController extends Controller
     }
 
     /**
+     * Resolve contacts/users list for conversation picker.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function contacts(Request $request)
+    {
+        $authUser = $request->user();
+        $provided = $this->executeIntegrationCallback(
+            'conversations.integrations.ui.contacts_provider',
+            [
+                'authUser' => $authUser,
+                'request' => $request,
+            ],
+            null
+        );
+
+        if (is_iterable($provided)) {
+            $contacts = collect($provided)->values()->all();
+
+            return response()->json([
+                'contacts' => $contacts,
+                'data' => $contacts,
+            ]);
+        }
+
+        $contacts = collect();
+        if (is_object($authUser) && method_exists($authUser, 'contacts')) {
+            $contacts = $authUser->contacts()->get();
+        } else {
+            $userModelClass = (string) config('conversations.user_model', \App\Models\User::class);
+            $keyName = $authUser->getKeyName();
+            $contacts = $userModelClass::query()
+                ->where($keyName, '!=', $authUser->{$keyName})
+                ->limit(100)
+                ->get();
+        }
+
+        $normalized = $contacts->map(function ($user) {
+            $keyName = $user->getKeyName();
+            $id = (string) ($user->{$keyName} ?? '');
+
+            return [
+                'id' => $id,
+                'uuid' => (string) ($user->uuid ?? $id),
+                'username' => method_exists($user, 'getUsername')
+                    ? (string) $user->getUsername()
+                    : (string) ($user->username ?? $user->name ?? '@user'),
+                'full_name' => (string) ($user->full_name ?? $user->name ?? ''),
+                'name' => (string) ($user->full_name ?? $user->name ?? ''),
+                'avatar_path' => (string) ($user->avatar_path ?? config('global.empty_user_avatar') ?? '/assets/theme/media/logos/empty-user.webp'),
+                'url' => (string) ($user->url ?? '#'),
+            ];
+        })->values()->all();
+
+        return response()->json([
+            'contacts' => $normalized,
+            'data' => $normalized,
+        ]);
+    }
+
+    /**
      * Store a newly created conversation.
      *
      * @param  \Illuminate\Http\Request  $request

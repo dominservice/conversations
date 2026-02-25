@@ -47,6 +47,44 @@ return array(
 
     /*
     |--------------------------------------------------------------------------
+    | Web UI Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Optional server-rendered panel routes and views.
+    |
+    */
+    'web' => [
+        'enabled' => env('CONVERSATIONS_WEB_ENABLED', true),
+        'prefix' => env('CONVERSATIONS_WEB_PREFIX', 'conversation'),
+        'middleware' => ['web', 'auth'],
+        'route_name_prefix' => 'conversations.web.',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | UI Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Theme and assets for package web panel.
+    |
+    */
+    'ui' => [
+        // bootstrap | tailwind
+        'theme' => env('CONVERSATIONS_UI_THEME', 'bootstrap'),
+        'view' => env('CONVERSATIONS_UI_VIEW', 'conversations::panel.index'),
+        'per_page' => env('CONVERSATIONS_UI_PER_PAGE', 100),
+
+        // Null = package API /api/conversations/contacts endpoint.
+        'contacts_endpoint' => env('CONVERSATIONS_UI_CONTACTS_ENDPOINT'),
+
+        'assets' => [
+            'css' => env('CONVERSATIONS_UI_CSS', 'vendor/conversations/css/panel.css'),
+            'js' => env('CONVERSATIONS_UI_JS', 'vendor/conversations/js/panel.js'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Integrations Configuration
     |--------------------------------------------------------------------------
     |
@@ -93,6 +131,20 @@ return array(
             // - "conversation.participants_added"
             // - "conversation.title_updated"
             'dispatcher' => null,
+        ],
+
+        'ui' => [
+            // Optional callback returning contacts used by web panel picker.
+            // Signature example: fn($authUser, $request) => array
+            'contacts_provider' => null,
+
+            // Optional callback returning conversations collection/paginator.
+            // Signature example: fn($authUser, $request) => iterable
+            'conversations_provider' => null,
+
+            // Optional callback for conversation delete action.
+            // Signature example: fn($conversationUuid, $authUser, $request): bool|null
+            'conversation_delete' => null,
         ],
     ],
 

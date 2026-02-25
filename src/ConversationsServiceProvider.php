@@ -68,6 +68,11 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__ . '/Http/routes.php' => base_path('routes/conversation-api.php'),
         ], 'conversations-routes');
 
+        // Publish web routes
+        $this->publishes([
+            __DIR__ . '/Http/web.php' => base_path('routes/conversation-web.php'),
+        ], 'conversations-web-routes');
+
         // Publish frontend components
         $this->publishes([
             __DIR__ . '/../resources/js/vue/vite' => resource_path('js/vendor/conversations/vue/vite'),
@@ -82,6 +87,17 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__ . '/../resources/js/types/react' => resource_path('js/vendor/conversations/types/react'),
         ], 'conversations-typescript');
 
+        // Publish blade views
+        $this->publishes([
+            __DIR__ . '/../resources/views' => resource_path('views/vendor/conversations'),
+        ], 'conversations-views');
+
+        // Publish package UI assets
+        $this->publishes([
+            __DIR__ . '/../resources/assets/js/panel.js' => public_path('vendor/conversations/js/panel.js'),
+            __DIR__ . '/../resources/assets/css/panel.css' => public_path('vendor/conversations/css/panel.css'),
+        ], 'conversations-assets');
+
         // Publish all assets with a single tag
         $this->publishes([
             __DIR__ . '/../config/conversations.php' => config_path('conversations.php'),
@@ -94,16 +110,21 @@ class ConversationsServiceProvider extends ServiceProvider
             __DIR__.'/../database/migrations/update_to_version_3.php.stub' => $this->getMigrationFileName($filesystem, 'update_conversations_to_version_3'),
             __DIR__ . '/../lang' => $targetLangPath,
             __DIR__ . '/Http/routes.php' => base_path('routes/conversation-api.php'),
+            __DIR__ . '/Http/web.php' => base_path('routes/conversation-web.php'),
             __DIR__ . '/../resources/js/vue/vite' => resource_path('js/vendor/conversations/vue/vite'),
             __DIR__ . '/../resources/js/vue/laravel-mix' => resource_path('js/vendor/conversations/vue/laravel-mix'),
             __DIR__ . '/../resources/js/react/vite' => resource_path('js/vendor/conversations/react/vite'),
             __DIR__ . '/../resources/js/react/laravel-mix' => resource_path('js/vendor/conversations/react/laravel-mix'),
             __DIR__ . '/../resources/js/types/vue' => resource_path('js/vendor/conversations/types/vue'),
             __DIR__ . '/../resources/js/types/react' => resource_path('js/vendor/conversations/types/react'),
+            __DIR__ . '/../resources/views' => resource_path('views/vendor/conversations'),
+            __DIR__ . '/../resources/assets/js/panel.js' => public_path('vendor/conversations/js/panel.js'),
+            __DIR__ . '/../resources/assets/css/panel.css' => public_path('vendor/conversations/css/panel.css'),
         ], 'conversations');
 
         // Load translations
         $this->loadTranslationsFrom(__DIR__ . '/../lang', 'conversations');
+        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'conversations');
     }
 
     /**
@@ -150,9 +171,12 @@ class ConversationsServiceProvider extends ServiceProvider
             }
         );
 
-        // Register API routes if enabled
+        // Register package routes
         if (config('conversations.api.enabled', true)) {
-            $this->registerRoutes();
+            $this->registerApiRoutes();
+        }
+        if (config('conversations.web.enabled', true)) {
+            $this->registerWebRoutes();
         }
 
         // Register GraphQL service provider if Lighthouse is installed
@@ -169,7 +193,7 @@ class ConversationsServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    protected function registerRoutes()
+    protected function registerApiRoutes()
     {
         // Check if the routes have been published
         $publishedRoutesPath = base_path('routes/conversation-api.php');
@@ -180,6 +204,22 @@ class ConversationsServiceProvider extends ServiceProvider
         } else {
             // Otherwise, load the package routes
             $this->loadRoutesFrom(__DIR__.'/Http/routes.php');
+        }
+    }
+
+    /**
+     * Register the package web routes.
+     *
+     * @return void
+     */
+    protected function registerWebRoutes()
+    {
+        $publishedRoutesPath = base_path('routes/conversation-web.php');
+
+        if (file_exists($publishedRoutesPath)) {
+            $this->loadRoutesFrom($publishedRoutesPath);
+        } else {
+            $this->loadRoutesFrom(__DIR__.'/Http/web.php');
         }
     }
 

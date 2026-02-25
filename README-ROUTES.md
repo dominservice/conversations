@@ -8,6 +8,7 @@ By default, the package registers the following routes:
 
 ```
 GET    /api/conversations                           - Get all conversations
+GET    /api/conversations/contacts                  - Get contacts for picker/modal
 POST   /api/conversations                           - Create a conversation
 GET    /api/conversations/{uuid}                    - Get a specific conversation
 DELETE /api/conversations/{uuid}                    - Delete a conversation
@@ -25,7 +26,7 @@ POST   /api/conversations/{uuid}/typing             - Send typing indicator
 To customize the routes, you need to publish them to your application:
 
 ```bash
-php artisan vendor:publish --provider="Dominservice\Conversations\ConversationsServiceProvider" --tag="routes"
+php artisan vendor:publish --provider="Dominservice\Conversations\ConversationsServiceProvider" --tag="conversations-routes"
 ```
 
 This will copy the routes file to the `routes/conversation-api.php` file in your application.
@@ -131,3 +132,38 @@ Route::group(['prefix' => $prefix, 'middleware' => $middleware], function () {
     // ...
 });
 ```
+## Web Panel Routes (new)
+
+The package can also register server-rendered web routes.
+
+Default web routes:
+
+```
+GET    /conversation                             - Conversation panel (with optional UUID)
+GET    /conversation/new/{userIdentifier}        - Start/open conversation with user
+GET    /conversation/new/{userIdentifier}/{relationType}/{relationId}
+DELETE /conversation/{uuid}                      - Soft delete for current user
+```
+
+Configuration keys:
+
+```php
+'web' => [
+    'enabled' => true,
+    'prefix' => 'conversation',
+    'middleware' => ['web', 'auth'],
+    'route_name_prefix' => 'conversations.web.',
+],
+```
+
+To publish editable web routes into app:
+
+```bash
+php artisan vendor:publish --tag=conversations-web-routes
+```
+
+Published file location:
+
+- `routes/conversation-web.php`
+
+The same fallback mechanism as API routes is used: if published file exists, package loads it instead of internal web routes.

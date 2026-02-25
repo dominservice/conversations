@@ -526,3 +526,58 @@ This package is open-sourced software licensed under the [MIT license](LICENSE).
 
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/dominservice)
+
+## Server-Rendered Web Panel (v3)
+
+Package now supports a mobile-first server-rendered panel that can be used without building a custom chat UI from scratch.
+
+### What is included
+
+- Optional web routes for conversation panel (`/conversation` by default)
+- Theme switch: `bootstrap` or `tailwind`
+- Package JS runtime for messaging flow (`panel.js`)
+- Package CSS for panel layout (`panel.css`)
+- Integration callbacks for project-specific business rules
+
+### Publish tags (new)
+
+```bash
+php artisan vendor:publish --tag=conversations-web-routes
+php artisan vendor:publish --tag=conversations-views
+php artisan vendor:publish --tag=conversations-assets
+```
+
+### Basic config
+
+```php
+'web' => [
+    'enabled' => true,
+    'prefix' => 'conversation',
+    'middleware' => ['web', 'auth'],
+    'route_name_prefix' => 'conversations.web.',
+],
+
+'ui' => [
+    'theme' => 'bootstrap', // bootstrap | tailwind
+    'view' => 'conversations::panel.index',
+    'contacts_endpoint' => null,
+    'assets' => [
+        'css' => 'vendor/conversations/css/panel.css',
+        'js' => 'vendor/conversations/js/panel.js',
+    ],
+],
+```
+
+### Integration callbacks (new)
+
+```php
+'integrations' => [
+    'ui' => [
+        'contacts_provider' => null,
+        'conversations_provider' => null,
+        'conversation_delete' => null,
+    ],
+],
+```
+
+These callbacks allow package-first behavior while still adapting to project-level rules (e.g. only contacts can start a conversation, custom delete policy, custom contact source).

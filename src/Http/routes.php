@@ -10,6 +10,7 @@ $middleware = config('conversations.api.middleware', ['api', 'auth:api']);
 Route::group(['prefix' => $prefix, 'middleware' => $middleware, 'as' => 'conversations.'], function () {
     // Conversations routes
     Route::get('/', [ConversationsController::class, 'index'])->name('index');
+    Route::get('/contacts', [ConversationsController::class, 'contacts'])->name('contacts');
     Route::post('/', [ConversationsController::class, 'store'])->name('store');
     Route::post('/start', [ConversationsController::class, 'start'])->name('start');
     // Backward compatible alias
