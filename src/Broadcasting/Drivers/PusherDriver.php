@@ -88,11 +88,15 @@ class PusherDriver implements DriverInterface
     protected function formatChannelName($channel)
     {
         if ($channel instanceof PrivateChannel) {
-            return 'private-' . $channel->name;
+            return str_starts_with($channel->name, 'private-')
+                ? $channel->name
+                : 'private-' . $channel->name;
         }
 
         if ($channel instanceof PresenceChannel) {
-            return 'presence-' . $channel->name;
+            return str_starts_with($channel->name, 'presence-')
+                ? $channel->name
+                : 'presence-' . $channel->name;
         }
 
         return $channel->name;

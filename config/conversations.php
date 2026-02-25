@@ -47,6 +47,57 @@ return array(
 
     /*
     |--------------------------------------------------------------------------
+    | Integrations Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Project-specific business rules should be enabled from config and handled
+    | by callbacks, so the package can be reused across many applications.
+    |
+    | Callback formats:
+    | - Closure
+    | - "Class@method"
+    | - ["Class", "method"]
+    | - Invokable class name
+    |
+    */
+    'integrations' => [
+        'conversation_start' => [
+            // Require that conversation participants are in contact relation.
+            'require_contact_relationship' => env('CONVERSATIONS_REQUIRE_CONTACTS_FOR_START', false),
+
+            // Optional relation fallback when no callback is configured.
+            // Example: "contacts"
+            'contact_relation_method' => env('CONVERSATIONS_CONTACT_RELATION_METHOD'),
+            // Optional key used in whereIn() on relation query.
+            // Example: "uuid"
+            'contact_relation_key' => env('CONVERSATIONS_CONTACT_RELATION_KEY'),
+
+            // Callback should return bool.
+            'contact_authorizer' => null,
+
+            // Execute automatic relation acceptance callback for participants.
+            'auto_accept_relationships' => env('CONVERSATIONS_AUTO_ACCEPT_RELATIONS', false),
+            'auto_acceptor' => null,
+
+            // Require conversation owner for sensitive actions.
+            'owner_required_for_title_update' => env('CONVERSATIONS_OWNER_REQUIRED_TITLE_UPDATE', true),
+            'owner_required_for_add_participants' => env('CONVERSATIONS_OWNER_REQUIRED_ADD_PARTICIPANTS', true),
+        ],
+
+        'business_notifications' => [
+            'enabled' => env('CONVERSATIONS_BUSINESS_NOTIFICATIONS_ENABLED', false),
+
+            // Callback receives event + payload context.
+            // Event examples:
+            // - "conversation.started"
+            // - "conversation.participants_added"
+            // - "conversation.title_updated"
+            'dispatcher' => null,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Hooks Configuration
     |--------------------------------------------------------------------------
     |

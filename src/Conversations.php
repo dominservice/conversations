@@ -28,6 +28,7 @@ use Dominservice\Conversations\Events\MessageRead;
 use Dominservice\Conversations\Events\MessageDeleted;
 use Dominservice\Conversations\Events\UserTyping;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Class Conversations
@@ -382,6 +383,106 @@ class Conversations
             return true;
         }
         return false;
+    }
+
+    /**
+     * Check if given user is the conversation owner.
+     *
+     * @param string $convUuid
+     * @param mixed $userId
+     * @return bool
+     */
+    public function isOwner(string $convUuid, $userId): bool
+    {
+        $ownerKey = $this->getOwnerKey();
+
+        return Conversation::where('uuid', $convUuid)
+            ->where($ownerKey, $userId)
+            ->exists();
+    }
+
+    /**
+     * Update conversation title.
+     *
+     * @param string $convUuid
+     * @param string $title
+     * @param mixed $actorId
+     * @param bool $ownerRequired
+     * @return bool
+     */
+    public function setConversationTitle(string $convUuid, string $title, $actorId, bool $ownerRequired = true): bool
+    {
+        $query = Conversation::where('uuid', $convUuid);
+        if ($ownerRequired) {
+            $query->where($this->getOwnerKey(), $actorId);
+        } elseif (!$this->existsUser($convUuid, $actorId)) {
+            return false;
+        }
+
+        $conversation = $query->first();
+        if (!$conversation) {
+            return false;
+        }
+
+        $conversation->title = $title;
+        $conversation->save();
+
+        return true;
+    }
+
+    /**
+     * Add users to conversation (if not already assigned).
+     *
+     * @param string $convUuid
+     * @param array<int, mixed> $users
+     * @return array<int, mixed> Newly added user identifiers.
+     */
+    public function addUsers(string $convUuid, array $users): array
+    {
+        $conversation = $this->get($convUuid);
+        if (!$conversation) {
+            return [];
+        }
+
+        $added = [];
+        foreach ($users as $userId) {
+            if (is_null($userId) || $userId === '') {
+                continue;
+            }
+
+            $alreadyExists = ConversationUser::where('conversation_uuid', $conversation->uuid)
+                ->where(get_user_key(), $userId)
+                ->exists();
+
+            if ($alreadyExists) {
+                continue;
+            }
+
+            $this->setUsers($conversation, $userId);
+            $added[] = $userId;
+        }
+
+        return $added;
+    }
+
+    /**
+     * Restore conversation visibility for a user if project schema supports it.
+     *
+     * @param string $convUuid
+     * @param mixed $userId
+     * @return void
+     */
+    public function restoreConversationForUser(string $convUuid, $userId): void
+    {
+        $conversationUsersTable = config('conversations.tables.conversation_users');
+
+        if (!Schema::hasColumn($conversationUsersTable, 'is_conversation_deleted')) {
+            return;
+        }
+
+        ConversationUser::where('conversation_uuid', $convUuid)
+            ->where(get_user_key(), $userId)
+            ->update(['is_conversation_deleted' => 0]);
     }
 
     /**
@@ -836,6 +937,18 @@ class Conversations
 //            $users->push($conversationUser);
         }
 //        $conversation->users->push($users);
+    }
+
+    /**
+     * Resolve owner key depending on user primary key type.
+     *
+     * @return string
+     */
+    private function getOwnerKey(): string
+    {
+        $userModel = new (config('conversations.user_model'));
+
+        return $userModel->getKeyType() === 'uuid' ? 'owner_uuid' : 'owner_id';
     }
 
     /**

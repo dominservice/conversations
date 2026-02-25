@@ -18,6 +18,11 @@ return [
         'create_failed' => 'Failed to create conversation',
         'deleted' => 'Conversation deleted successfully',
         'unauthorized' => 'Unauthorized',
+        'participants_required' => 'You must provide at least one participant.',
+        'contacts_required' => 'Participants must be in your contacts list.',
+        'marked_read' => 'Conversation marked as read',
+        'title_updated' => 'Conversation title updated successfully',
+        'participants_added' => 'Participants added successfully',
     ],
 
     'message' => [

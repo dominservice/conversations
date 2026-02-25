@@ -11,6 +11,13 @@ use Illuminate\Contracts\Foundation\Application;
 class BroadcastManager extends Manager
 {
     /**
+     * Compatibility property used by package internals and custom managers.
+     *
+     * @var \Illuminate\Contracts\Foundation\Application
+     */
+    protected $app;
+
+    /**
      * The Laravel broadcast manager instance.
      *
      * @var \Illuminate\Broadcasting\BroadcastManager
@@ -27,6 +34,7 @@ class BroadcastManager extends Manager
     public function __construct(Application $app, LaravelBroadcastManager $laravelBroadcastManager)
     {
         parent::__construct($app);
+        $this->app = $app;
         $this->laravelBroadcastManager = $laravelBroadcastManager;
     }
 
