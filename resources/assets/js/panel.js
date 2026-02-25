@@ -156,6 +156,29 @@ var Conversations = function () {
         return (currentUser.uuid || currentUser.id || '').toString();
     };
 
+    const getCurrentUserIdentifiers = () => {
+        const dso = resolveDSO();
+        const identifiers = [
+            dso.getUserData('uuid'),
+            dso.getUserData('id'),
+            currentUser?.uuid,
+            currentUser?.id,
+        ]
+            .map((value) => (value ?? '').toString().trim())
+            .filter((value) => value !== '');
+
+        return Array.from(new Set(identifiers));
+    };
+
+    const isCurrentUserIdentifier = (identifier) => {
+        const normalized = (identifier ?? '').toString().trim();
+        if (normalized === '') {
+            return false;
+        }
+
+        return getCurrentUserIdentifiers().includes(normalized);
+    };
+
     const t = (key, fallback = null) => {
         if (texts[key]) {
             return texts[key];
@@ -280,11 +303,10 @@ var Conversations = function () {
     const normalizeMessage = (messageOrContent, createdAt, id, name, avatar, direction, attachments) => {
         if (typeof messageOrContent === 'object' && messageOrContent !== null) {
             const message = messageOrContent;
-            const currentUserId = getUserIdentifier();
             const messageId = message.id || message.message_id;
             const senderId = resolveSenderId(message);
             const senderMeta = resolveUserMeta(senderId);
-            const computedDirection = senderId !== '' && senderId === currentUserId ? 'from' : 'to';
+            const computedDirection = isCurrentUserIdentifier(senderId) ? 'from' : 'to';
 
             return {
                 id: messageId,
@@ -448,8 +470,7 @@ var Conversations = function () {
 
         const senderId = resolveSenderId(message);
         const senderMeta = resolveUserMeta(senderId);
-        const currentUserId = getUserIdentifier();
-        const senderLabel = senderId !== '' && senderId === currentUserId
+        const senderLabel = isCurrentUserIdentifier(senderId)
             ? t('You', 'You')
             : senderMeta?.username || message.sender_name || message.sender?.username || '@user';
         const content = (message.content || '').toString().trim();
@@ -749,8 +770,7 @@ var Conversations = function () {
                 return;
             }
 
-            const currentUserId = getUserIdentifier();
-            if (resolveSenderId(eventMessage) === currentUserId) {
+            if (isCurrentUserIdentifier(resolveSenderId(eventMessage))) {
                 return;
             }
 
@@ -812,9 +832,8 @@ var Conversations = function () {
         conversationChannel.bind('user.typing', function (payload) {
             debugRealtime('event user.typing', payload);
             const eventPayload = unwrapEventPayload(payload) || {};
-            const currentUserId = getUserIdentifier();
             const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload);
-            if ((eventPayload.user_id || eventPayload.userId || '').toString() === currentUserId || payloadConversationUuid !== conversationUuid) {
+            if (isCurrentUserIdentifier((eventPayload.user_id || eventPayload.userId || '').toString()) || payloadConversationUuid !== conversationUuid) {
                 return;
             }
 
@@ -1042,19 +1061,41 @@ var Conversations = function () {
                 });
 
                 $('.conversation-change-title').on('click', function () {
-                    const titleContainer = $('.conversation-title');
-                    const titleText = titleContainer.text();
-                    titleContainer.html(
-                        '<div class="input-group input-group-sm mt-2">' +
-                        '<input type="text" class="form-control conversation-title-value" placeholder="' + titleText + '" value="' + titleText + '">' +
-                        '<button class="btn btn-outline-secondary conversation-title-value-save" type="button"><i class="fa fa-check"></i></button>' +
-                        '</div>'
-                    );
-                    $('.conversation-actions').hide();
+                    const currentTitle = ($('.conversation-title').text() || '').trim();
+                    let modal = $('#conversationTitleModal');
+                    if (!modal.length) {
+                        const modalHtml = '' +
+                            '<div class="modal fade" id="conversationTitleModal" tabindex="-1" aria-hidden="true">' +
+                            '  <div class="modal-dialog">' +
+                            '    <div class="modal-content">' +
+                            '      <div class="modal-header">' +
+                            '        <h5 class="modal-title">' + t('Edit', 'Edit') + '</h5>' +
+                            '        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                            '      </div>' +
+                            '      <div class="modal-body">' +
+                            '        <label class="form-label">' + t('Title', 'Title') + '</label>' +
+                            '        <input type="text" class="form-control conversation-title-modal-value" maxlength="255">' +
+                            '      </div>' +
+                            '      <div class="modal-footer">' +
+                            '        <button type="button" class="btn btn-light" data-bs-dismiss="modal">' + t('Cancel', 'Cancel') + '</button>' +
+                            '        <button type="button" class="btn btn-primary conversation-title-modal-save">' + t('Save', 'Save') + '</button>' +
+                            '      </div>' +
+                            '    </div>' +
+                            '  </div>' +
+                            '</div>';
+
+                        $('body').append(modalHtml);
+                        modal = $('#conversationTitleModal');
+                    }
+
+                    modal.find('.conversation-title-modal-value').val(currentTitle);
+                    const bsModal = bootstrap.Modal.getOrCreateInstance(modal[0]);
+                    bsModal.show();
                 });
 
-                $('body').on('click', '.conversation-title-value-save', function () {
-                    const title = $('.conversation-title-value').val();
+                $('body').on('click', '.conversation-title-modal-save', function () {
+                    const modal = $('#conversationTitleModal');
+                    const title = (modal.find('.conversation-title-modal-value').val() || '').toString().trim();
                     const formData = new FormData();
                     formData.append('_method', 'PUT');
                     formData.append('title', title);
@@ -1067,8 +1108,9 @@ var Conversations = function () {
                         } else {
                             notify(response.data.message || t('Saved', 'Saved'), 'success');
                             $('.contact.active').find('.title').html(title);
-                            $('.conversation-actions').show();
                             $('.conversation-title').html(title);
+                            const bsModal = bootstrap.Modal.getOrCreateInstance(modal[0]);
+                            bsModal.hide();
                         }
                     }).catch((error) => {
                         console.log(error);

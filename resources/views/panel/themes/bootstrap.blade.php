@@ -184,10 +184,10 @@
 
                         @if($currentConversation->type?->name !== 'support' && (!$currentConversation->owner || $currentConversation->owner->uuid === request()->user()->uuid))
                             <span class="conversation-actions d-flex gap-1">
+                                <button class="btn btn-sm btn-outline-primary conversation-change-title" type="button" title="{{ __('Edit') }}">
+                                    <i class="fa fa-edit"></i>
+                                </button>
                                 @if($currentConversation->type?->name === 'group')
-                                    <button class="btn btn-sm btn-outline-primary conversation-change-title" type="button" title="{{ __('Edit') }}">
-                                        <i class="fa fa-edit"></i>
-                                    </button>
                                     <button class="btn btn-sm btn-outline-success conversation-add-participant" type="button" title="{{ __('Add') }}">
                                         <i class="fa fa-user-plus"></i>
                                     </button>
