@@ -59,7 +59,12 @@
         return $defaultAvatarUrl;
     };
 
+    $resolveConversationUuid = static function ($conversation): string {
+        return (string) ($conversation->uuid ?? $conversation->conversation_uuid ?? $conversation->id ?? '');
+    };
+
     $currentConversationPrimaryParticipant = $currentConversation ? $resolveConversationParticipant($currentConversation) : null;
+    $currentConversationUuid = $currentConversation ? $resolveConversationUuid($currentConversation) : '';
     $panelCss = config('conversations.ui.assets.css');
     $panelJs = config('conversations.ui.assets.js');
 @endphp
@@ -83,6 +88,7 @@
                 <ul class="list-unstyled mb-0">
                     @foreach($conversations as $conversation)
                         @php
+                            $conversationUuid = $resolveConversationUuid($conversation);
                             $conversationPrimaryParticipant = $resolveConversationParticipant($conversation);
                             $conversationTitle = (string) ($conversation->title ?? '');
                             $conversationPrimaryParticipantName = $resolveConversationUserName($conversationPrimaryParticipant);
@@ -94,11 +100,11 @@
                             $previewText = trim((string) ($conversation?->lastMessage?->content ?? ''));
                         @endphp
                         <li
-                            class="contact conv-list-item @if($currentConversation && $conversation->uuid === $currentConversation->uuid) active @endif"
-                            data-conversation-uuid="{{ $conversation->uuid }}"
+                            class="contact conv-list-item @if($currentConversation && $conversationUuid !== '' && $conversationUuid === $currentConversationUuid) active @endif"
+                            data-conversation-uuid="{{ $conversationUuid }}"
                             data-conversation-title="{{ strtolower($conversationTitle . ' ' . $conversationName . ' ' . $previewText) }}"
                         >
-                            <a href="{{ route($webRouteIndexName, $conversation->uuid) }}" class="flex gap-2 items-start no-underline">
+                            <a href="{{ $conversationUuid !== '' ? route($webRouteIndexName, ['uuid' => $conversationUuid]) : route($webRouteIndexName) }}" class="flex gap-2 items-start no-underline">
                                 @if($conversation->type?->name === 'group')
                                     <img src="{{ asset('assets/theme/media/group.webp') }}" class="rounded-full conv-avatar" alt="{{ $conversationName }}">
                                 @else
@@ -134,7 +140,7 @@
         </aside>
 
         <section class="content conv-main tw-main">
-            @if($currentConversation)
+            @if($currentConversation && $currentConversationUuid !== '')
                 <div class="contact-profile conv-header border-b border-slate-200">
                     <div class="flex items-center gap-2 p-2">
                         <button type="button" class="conv-mobile-back inline-flex items-center justify-center h-8 w-8 rounded border border-slate-200" data-conv-toggle-sidebar>&larr;</button>
@@ -190,16 +196,16 @@
         }
 
         Conversations.init({
-            @if($currentConversation?->uuid)
-            send_route: '{{ $conversationApiBase . '/' . $currentConversation->uuid . '/messages' }}',
-            mark_as_read_route: '{{ $conversationApiBase . '/' . $currentConversation->uuid . '/read' }}',
-            delete_route: '{{ route($webRouteDeleteName, $currentConversation->uuid) }}',
-            conversation_title_route: '{{ $conversationApiBase . '/' . $currentConversation->uuid . '/title' }}',
-            add_participant_route: '{{ $conversationApiBase . '/' . $currentConversation->uuid . '/participants' }}',
-            conversation_uuid: '{{ $currentConversation->uuid }}',
-            delete_message_route: '{{ $conversationApiBase . '/' . $currentConversation->uuid . '/messages/' }}',
-            get_messages_route: '{{ $conversationApiBase . '/' . $currentConversation->uuid . '/messages' }}',
-            typing_route: '{{ $conversationApiBase . '/' . $currentConversation->uuid . '/typing' }}',
+            @if($currentConversationUuid !== '')
+            send_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/messages' }}',
+            mark_as_read_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/read' }}',
+            delete_route: '{{ route($webRouteDeleteName, ['uuid' => $currentConversationUuid]) }}',
+            conversation_title_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/title' }}',
+            add_participant_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/participants' }}',
+            conversation_uuid: '{{ $currentConversationUuid }}',
+            delete_message_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/messages/' }}',
+            get_messages_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/messages' }}',
+            typing_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/typing' }}',
             @endif
             contacts_route: '{{ $contactsEndpoint }}',
             create_conversation_route: '{{ $conversationApiBase . '/start' }}',

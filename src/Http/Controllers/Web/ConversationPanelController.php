@@ -25,17 +25,33 @@ class ConversationPanelController extends Controller
         $authUser = $request->user();
         $userId = $this->resolveCurrentUserId();
         $conversations = $this->resolveConversationsForPanel($request, $authUser, $userId);
+        $conversations = $conversations->map(function ($conversation) {
+            $resolvedUuid = $this->resolveConversationUuid($conversation);
+            if ($resolvedUuid !== '' && empty($conversation->uuid)) {
+                $conversation->uuid = $resolvedUuid;
+            }
+
+            return $conversation;
+        })->values();
 
         $currentConversation = null;
         if (!empty($uuid)) {
             $currentConversation = $conversations->firstWhere('uuid', $uuid);
+            if (!$currentConversation) {
+                $currentConversation = $conversations->first(function ($conversation) use ($uuid) {
+                    return $this->resolveConversationUuid($conversation) === (string) $uuid;
+                });
+            }
         }
         if (!$currentConversation) {
             $currentConversation = $conversations->first();
         }
 
         if ($currentConversation) {
-            app('conversations')->markReadAll($currentConversation->uuid, $userId);
+            $currentConversationUuid = $this->resolveConversationUuid($currentConversation);
+            if ($currentConversationUuid !== '') {
+                app('conversations')->markReadAll($currentConversationUuid, $userId);
+            }
         }
 
         $conversationApiPrefix = trim((string) config('conversations.api.prefix', 'api/conversations'), '/');
@@ -450,6 +466,17 @@ class ConversationPanelController extends Controller
     protected function resolveProfileUrl($user): string
     {
         return (string) ($user->url ?? '#');
+    }
+
+    /**
+     * Resolve conversation UUID regardless of legacy field naming.
+     *
+     * @param mixed $conversation
+     * @return string
+     */
+    protected function resolveConversationUuid($conversation): string
+    {
+        return (string) ($conversation->uuid ?? $conversation->conversation_uuid ?? $conversation->id ?? '');
     }
 
     /**
