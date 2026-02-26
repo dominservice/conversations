@@ -160,6 +160,39 @@ return array(
 
     /*
     |--------------------------------------------------------------------------
+    | Presence Configuration
+    |--------------------------------------------------------------------------
+    |
+    | User last_seen_at touch configuration used by middleware and notification
+    | throttling logic.
+    |
+    */
+    'presence' => [
+        'last_seen_touch_interval_seconds' => env('CONVERSATIONS_LAST_SEEN_TOUCH_INTERVAL_SECONDS', 60),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notifications Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Conversation email notifications can be delayed and sent only for users
+    | who remain inactive and have unread messages.
+    |
+    */
+    'notifications' => [
+        'email' => [
+            'enabled' => env('CONVERSATIONS_EMAIL_NOTIFICATIONS_ENABLED', true),
+            'delay_minutes' => env('CONVERSATIONS_EMAIL_NOTIFICATIONS_DELAY_MINUTES', 5),
+            'require_inactive_user' => env('CONVERSATIONS_EMAIL_REQUIRE_INACTIVE_USER', true),
+            'inactive_after_minutes' => env('CONVERSATIONS_EMAIL_INACTIVE_AFTER_MINUTES', 5),
+            'deduplicate_via_notified_at' => env('CONVERSATIONS_EMAIL_DEDUPLICATE_VIA_NOTIFIED_AT', true),
+            'cache_ttl_minutes' => env('CONVERSATIONS_EMAIL_NOTIFICATION_CACHE_TTL_MINUTES', 10080), // 7 days
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Hooks Configuration
     |--------------------------------------------------------------------------
     |

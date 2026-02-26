@@ -32,9 +32,12 @@ var Conversations = function () {
     let subscribedConversationChannels = {};
     let processedRealtimeMessageMap = {};
     let texts = {};
+    let realtimeConnectAttempts = 0;
 
     const MESSAGE_BATCH_SIZE = 20;
     const MESSAGE_SYNC_INTERVAL_MS = 4000;
+    const REALTIME_BOOT_MAX_ATTEMPTS = 12;
+    const REALTIME_BOOT_RETRY_MS = 500;
     const DEFAULT_AVATAR = '/assets/theme/media/logos/empty-user.webp';
 
     const normalizeAvatarPath = (avatarPath) => {
@@ -85,17 +88,15 @@ var Conversations = function () {
         try {
             if (typeof window !== 'undefined' && window.localStorage) {
                 const value = window.localStorage.getItem('dso_realtime_debug');
-                if (value === '0' || value === 'false') {
-                    return;
+                if (value === '1' || value === 'true') {
+                    const args = Array.prototype.slice.call(arguments);
+                    args.unshift('[ConversationsRealtime]');
+                    console.log.apply(console, args);
                 }
             }
         } catch (e) {
             // ignore
         }
-
-        const args = Array.prototype.slice.call(arguments);
-        args.unshift('[ConversationsRealtime]');
-        console.log.apply(console, args);
     };
 
     const setConfig = (params) => {
@@ -216,6 +217,61 @@ var Conversations = function () {
         }
     };
 
+    const hasExplicitTimezone = (value) => {
+        const raw = (value || '').toString().trim();
+        if (raw === '') {
+            return false;
+        }
+
+        return /(Z|[+\-]\d{2}:?\d{2})$/i.test(raw);
+    };
+
+    const parseDateValue = (dateValue, timezone) => {
+        const raw = (dateValue || '').toString().trim();
+        if (raw === '') {
+            return null;
+        }
+
+        if (typeof moment !== 'undefined') {
+            let parsedMoment = null;
+
+            if (hasExplicitTimezone(raw)) {
+                parsedMoment = moment.parseZone(raw);
+            } else {
+                // Backend stores conversation timestamps in UTC without offset.
+                parsedMoment = moment.utc(raw, moment.ISO_8601, true);
+                if (!parsedMoment.isValid()) {
+                    parsedMoment = moment.utc(raw);
+                }
+            }
+
+            if (!parsedMoment.isValid()) {
+                parsedMoment = moment(raw);
+            }
+
+            if (parsedMoment.isValid() && timezone && typeof parsedMoment.tz === 'function') {
+                parsedMoment = parsedMoment.tz(timezone);
+            }
+
+            return parsedMoment.isValid() ? parsedMoment : null;
+        }
+
+        if (!hasExplicitTimezone(raw) && /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?$/i.test(raw)) {
+            const normalizedUtc = raw.replace(' ', 'T') + 'Z';
+            const parsedUtc = new Date(normalizedUtc);
+            if (!Number.isNaN(parsedUtc.getTime())) {
+                return parsedUtc;
+            }
+        }
+
+        const parsed = new Date(raw);
+        if (!Number.isNaN(parsed.getTime())) {
+            return parsed;
+        }
+
+        return null;
+    };
+
     const humanizeDate = () => {
         $('.conversation-message-date').each(function (_k, v) {
             const dateValue = $(v).data('messageDate');
@@ -223,18 +279,21 @@ var Conversations = function () {
                 return;
             }
 
-            if (typeof moment !== 'undefined') {
-                const dso = resolveDSO();
-                const timezone = dso.config('timezone') || 'UTC';
-                const locale = dso.config('locale') || 'en';
-                $(v).html(moment(dateValue).tz(timezone).locale(locale).fromNow());
+            const dso = resolveDSO();
+            const timezone = dso.config('timezone') || (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+            const locale = dso.config('locale') || 'en';
+            const parsed = parseDateValue(dateValue, timezone);
+
+            if (!parsed) {
                 return;
             }
 
-            const parsed = new Date(dateValue);
-            if (!Number.isNaN(parsed.getTime())) {
-                $(v).text(parsed.toLocaleString());
+            if (typeof moment !== 'undefined' && typeof parsed.fromNow === 'function') {
+                $(v).html(parsed.locale(locale).fromNow());
+                return;
             }
+
+            $(v).text(parsed.toLocaleString());
         });
     };
 
@@ -1021,13 +1080,37 @@ var Conversations = function () {
 
     const connectRealtime = () => {
         const dso = resolveDSO();
-        const realtimeConfig = dso.config('realtime') || {};
+        let realtimeConfig = dso.config('realtime') || {};
+        if ((!realtimeConfig || Object.keys(realtimeConfig).length === 0)
+            && typeof window !== 'undefined'
+            && typeof window.DSOConfig !== 'undefined'
+            && window.DSOConfig
+            && typeof window.DSOConfig === 'object'
+        ) {
+            realtimeConfig = (window.DSOConfig.config && window.DSOConfig.config.realtime)
+                ? window.DSOConfig.config.realtime
+                : realtimeConfig;
+        }
+
         const connectionName = (realtimeConfig.connection || '').toString().toLowerCase();
+
+        if (!realtimeConfig.key && realtimeConnectAttempts < REALTIME_BOOT_MAX_ATTEMPTS) {
+            realtimeConnectAttempts += 1;
+            debugRealtime('waiting for realtime config', {
+                attempt: realtimeConnectAttempts,
+                max_attempts: REALTIME_BOOT_MAX_ATTEMPTS,
+            });
+
+            setTimeout(connectRealtime, REALTIME_BOOT_RETRY_MS);
+            return;
+        }
+
         if (!realtimeConfig.key || ['null', 'log', 'redis'].includes(connectionName)) {
-            console.warn('Conversations realtime disabled.', realtimeConfig);
             startMessageSyncFallback();
             return;
         }
+
+        realtimeConnectAttempts = 0;
 
         let pusher = null;
         try {
