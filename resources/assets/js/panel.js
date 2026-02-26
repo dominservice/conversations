@@ -34,6 +34,8 @@ var Conversations = function () {
     let messageSyncIntervalId = null;
     let subscribedConversationChannels = {};
     let processedRealtimeMessageMap = {};
+    let interactionReadDebounce = null;
+    let lastBulkMarkAsReadAt = 0;
     let texts = {};
     let realtimeConnectAttempts = 0;
 
@@ -41,6 +43,8 @@ var Conversations = function () {
     const MESSAGE_SYNC_INTERVAL_MS = 4000;
     const REALTIME_BOOT_MAX_ATTEMPTS = 12;
     const REALTIME_BOOT_RETRY_MS = 500;
+    const MARK_AS_READ_THROTTLE_MS = 1200;
+    const INTERACTION_READ_DEBOUNCE_MS = 180;
     const DEFAULT_AVATAR = '/assets/theme/media/logos/empty-user.webp';
 
     const normalizeAvatarPath = (avatarPath) => {
@@ -846,7 +850,21 @@ var Conversations = function () {
         $('.conversations-messages-items').animate({ scrollTop: list.scrollHeight }, 200);
     };
 
-    const markAsRead = (messageId) => {
+    const markAsRead = (messageId, options = {}) => {
+        const normalizedMessageId = (typeof messageId === 'undefined' || messageId === '' || messageId === null)
+            ? null
+            : messageId;
+        const force = options && options.force === true;
+
+        if (!force && normalizedMessageId === null) {
+            const now = Date.now();
+            if ((now - lastBulkMarkAsReadAt) < MARK_AS_READ_THROTTLE_MS) {
+                return;
+            }
+
+            lastBulkMarkAsReadAt = now;
+        }
+
         if (conversationUuid) {
             const activeConversationItem = $('.conversations-list-items').find('.contact[data-conversation-uuid="' + conversationUuid + '"]').first();
             if (activeConversationItem.length) {
@@ -861,12 +879,65 @@ var Conversations = function () {
         $.ajax({
             type: 'post',
             url: markAsReadRoute,
-            data: { message: messageId, conversation: conversationUuid },
+            data: { message: normalizedMessageId, conversation: conversationUuid },
             headers: getAuthHeaders(),
             dataType: 'json',
             async: true,
             cache: false,
         });
+    };
+
+    const scheduleMarkConversationAsReadOnInteraction = () => {
+        if (!conversationUuid) {
+            return;
+        }
+
+        if (interactionReadDebounce) {
+            clearTimeout(interactionReadDebounce);
+        }
+
+        interactionReadDebounce = setTimeout(() => {
+            interactionReadDebounce = null;
+            markAsRead(null);
+        }, INTERACTION_READ_DEBOUNCE_MS);
+    };
+
+    const bindReadInteractionHandlers = () => {
+        if (!conversationUuid) {
+            return;
+        }
+
+        const namespace = '.conversationReadInteraction';
+
+        $(window)
+            .off('focus' + namespace)
+            .on('focus' + namespace, function () {
+                scheduleMarkConversationAsReadOnInteraction();
+            });
+
+        $(document)
+            .off('visibilitychange' + namespace)
+            .on('visibilitychange' + namespace, function () {
+                if (document.visibilityState === 'visible') {
+                    scheduleMarkConversationAsReadOnInteraction();
+                }
+            });
+
+        $(containerConv)
+            .off('click' + namespace)
+            .on(
+                'click' + namespace,
+                '.conversations-messages-items, .conversations-item, .conversation-footer, .conversation-header',
+                function () {
+                    scheduleMarkConversationAsReadOnInteraction();
+                }
+            );
+
+        $(containerConv)
+            .off('keyup' + namespace)
+            .on('keyup' + namespace, '[name="message"]', function () {
+                scheduleMarkConversationAsReadOnInteraction();
+            });
     };
 
     const resolveConversationRedirectUrl = (response) => {
@@ -1792,6 +1863,8 @@ var Conversations = function () {
             });
 
             if (conversationUuid) {
+                bindReadInteractionHandlers();
+
                 $('.conversations-button').on('click', function () {
                     handleMessaging();
                 });
