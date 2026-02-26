@@ -1135,20 +1135,37 @@ class Conversations
      */
     public function getMessageReadBy(int $messageId)
     {
-        $userModel = config('conversations.user_model');
-        $userKey = get_user_key();
-
         $readStatuses = ConversationMessageStatus::where('message_id', $messageId)
             ->where('status', self::READ)
             ->where('self', 0) // Exclude the sender
-            ->with(['user' => function($query) {
-                $query->select('id', 'name', 'email'); // Add any other user fields you want to include
-            }])
+            ->with('user')
             ->get();
 
-        return $readStatuses->map(function($status) {
-            return $status->user;
-        })->filter(); // Remove any null values
+        return $readStatuses
+            ->map(function ($status) {
+                $user = $status->user;
+                if (!$user) {
+                    return null;
+                }
+
+                $keyName = method_exists($user, 'getKeyName') ? $user->getKeyName() : 'id';
+                $id = (string) ($user->{$keyName} ?? $user->uuid ?? $user->id ?? '');
+                if ($id === '') {
+                    return null;
+                }
+
+                return [
+                    'id' => $id,
+                    'uuid' => (string) ($user->uuid ?? $id),
+                    'name' => (string) ($user->name ?? $user->full_name ?? $user->username ?? ''),
+                    'full_name' => (string) ($user->full_name ?? $user->name ?? ''),
+                    'username' => (string) ($user->username ?? ''),
+                    'email' => (string) ($user->email ?? ''),
+                    'avatar_path' => (string) ($user->avatar_path ?? ''),
+                ];
+            })
+            ->filter()
+            ->values();
     }
 
     /**
@@ -1163,15 +1180,32 @@ class Conversations
             ->with(['status' => function($query) {
                 $query->where('status', self::READ)
                     ->where('self', 0) // Exclude the sender
-                    ->with(['user' => function($query) {
-                        $query->select('id', 'name', 'email'); // Add any other user fields you want to include
-                    }]);
+                    ->with('user');
             }])
             ->get();
 
         return $messages->map(function($message) {
             $readBy = $message->status->map(function($status) {
-                return $status->user;
+                $user = $status->user;
+                if (!$user) {
+                    return null;
+                }
+
+                $keyName = method_exists($user, 'getKeyName') ? $user->getKeyName() : 'id';
+                $id = (string) ($user->{$keyName} ?? $user->uuid ?? $user->id ?? '');
+                if ($id === '') {
+                    return null;
+                }
+
+                return [
+                    'id' => $id,
+                    'uuid' => (string) ($user->uuid ?? $id),
+                    'name' => (string) ($user->name ?? $user->full_name ?? $user->username ?? ''),
+                    'full_name' => (string) ($user->full_name ?? $user->name ?? ''),
+                    'username' => (string) ($user->username ?? ''),
+                    'email' => (string) ($user->email ?? ''),
+                    'avatar_path' => (string) ($user->avatar_path ?? ''),
+                ];
             })->filter(); // Remove any null values
 
             return [

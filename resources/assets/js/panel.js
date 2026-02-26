@@ -469,15 +469,28 @@ var Conversations = function () {
             .replace(/>/g, '&gt;');
     };
 
+    const tryParseJson = (value) => {
+        const raw = (value ?? '').toString().trim();
+        if (raw === '') {
+            return null;
+        }
+
+        try {
+            return JSON.parse(raw);
+        } catch (e) {
+            return null;
+        }
+    };
+
     const renderReceiptTickIcon = (isRead) => {
         if (isRead) {
-            return '<svg class="conversation-read-receipt-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">' +
+            return '<svg class="conversation-read-receipt-icon" viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false" style="width:11px;height:11px;display:block">' +
                 '<path d="M1.8 8.6l2.1 2.1L9.6 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
                 '<path d="M6 8.6l2.1 2.1L13.8 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
                 '</svg>';
         }
 
-        return '<svg class="conversation-read-receipt-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">' +
+        return '<svg class="conversation-read-receipt-icon" viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false" style="width:11px;height:11px;display:block">' +
             '<path d="M4 8.6l2.1 2.1L12 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
             '</svg>';
     };
@@ -533,6 +546,27 @@ var Conversations = function () {
             .filter((participantId) => !readBy.includes(participantId));
     };
 
+    const ensureMessageMetaRow = (messageEl) => {
+        let metaRow = messageEl.find('.conversation-message-meta').first();
+        if (metaRow.length) {
+            return metaRow;
+        }
+
+        const deleteEl = messageEl.find('.message-delete').first();
+        const dateEl = messageEl.find('.conversation-message-date').first();
+        metaRow = $('<div class="conversation-message-meta"></div>');
+
+        if (deleteEl.length) {
+            metaRow.append(deleteEl);
+        }
+        if (dateEl.length) {
+            metaRow.append(dateEl);
+        }
+
+        messageEl.append(metaRow);
+        return metaRow;
+    };
+
     const renderMessageReadReceipt = (messageEl) => {
         if (!readReceiptsEnabled || !messageEl.length || !messageEl.hasClass('sent')) {
             messageEl.find('.conversation-message-read-receipt').remove();
@@ -564,7 +598,7 @@ var Conversations = function () {
                     '<span class="conversation-read-receipt-state is-read" title="' + tooltip + '">' +
                     renderReceiptTickIcon(true) +
                     '</span>' +
-                    '<img class="conversation-read-receipt-avatar" src="' + readerAvatar + '" alt="' + escapeReceiptText(readerName) + '" title="' + tooltip + '">';
+                    '<img class="conversation-read-receipt-avatar" src="' + readerAvatar + '" alt="' + escapeReceiptText(readerName) + '" title="' + tooltip + '" style="width:10px;height:10px;min-width:10px;min-height:10px;max-width:10px;max-height:10px;border-radius:9999px;object-fit:cover;">';
             } else {
                 receiptHtml =
                     '<span class="conversation-read-receipt-state is-sent" title="' + escapeReceiptText(sentLabel) + '">' +
@@ -584,7 +618,7 @@ var Conversations = function () {
                 const avatarItems = visibleReaders.map((readerId) => {
                     const readerName = resolveReceiptUserDisplayName(readerId);
                     const readerAvatar = resolveReceiptUserAvatar(readerId);
-                    return '<img class="conversation-read-receipt-avatar" src="' + readerAvatar + '" alt="' + escapeReceiptText(readerName) + '" title="' + readTooltip + '">';
+                    return '<img class="conversation-read-receipt-avatar" src="' + readerAvatar + '" alt="' + escapeReceiptText(readerName) + '" title="' + readTooltip + '" style="width:10px;height:10px;min-width:10px;min-height:10px;max-width:10px;max-height:10px;border-radius:9999px;object-fit:cover;">';
                 }).join('');
 
                 const extraBadge = extraReaders > 0
@@ -609,15 +643,11 @@ var Conversations = function () {
                 unreadHtml;
         }
 
-        let receiptEl = messageEl.find('.conversation-message-read-receipt').first();
+        const metaRow = ensureMessageMetaRow(messageEl);
+        let receiptEl = metaRow.find('.conversation-message-read-receipt').first();
         if (!receiptEl.length) {
-            const dateEl = messageEl.find('.conversation-message-date').first();
-            if (dateEl.length) {
-                dateEl.after('<small class="conversation-message-read-receipt text-muted small d-block"></small>');
-            } else {
-                messageEl.append('<small class="conversation-message-read-receipt text-muted small d-block"></small>');
-            }
-            receiptEl = messageEl.find('.conversation-message-read-receipt').first();
+            metaRow.append('<small class="conversation-message-read-receipt text-muted small"></small>');
+            receiptEl = metaRow.find('.conversation-message-read-receipt').first();
         }
 
         receiptEl.html(receiptHtml);
@@ -1007,23 +1037,38 @@ var Conversations = function () {
     };
 
     const unwrapEventPayload = (payload) => {
-        if (!payload || typeof payload !== 'object') {
+        const normalizedPayload = (typeof payload === 'string')
+            ? (tryParseJson(payload) || null)
+            : payload;
+
+        if (!normalizedPayload || typeof normalizedPayload !== 'object') {
             return null;
         }
 
-        if (payload.message && typeof payload.message === 'object') {
-            return payload.message;
+        if (normalizedPayload.message && typeof normalizedPayload.message === 'object') {
+            return normalizedPayload.message;
         }
 
-        if (payload.data && typeof payload.data === 'object') {
-            if (payload.data.message && typeof payload.data.message === 'object') {
-                return payload.data.message;
+        if (typeof normalizedPayload.data === 'string') {
+            const parsedData = tryParseJson(normalizedPayload.data);
+            if (parsedData && typeof parsedData === 'object') {
+                if (parsedData.message && typeof parsedData.message === 'object') {
+                    return parsedData.message;
+                }
+
+                return parsedData;
+            }
+        }
+
+        if (normalizedPayload.data && typeof normalizedPayload.data === 'object') {
+            if (normalizedPayload.data.message && typeof normalizedPayload.data.message === 'object') {
+                return normalizedPayload.data.message;
             }
 
-            return payload.data;
+            return normalizedPayload.data;
         }
 
-        return payload;
+        return normalizedPayload;
     };
 
     const resolveConversationUuidFromPayload = (payload) => {

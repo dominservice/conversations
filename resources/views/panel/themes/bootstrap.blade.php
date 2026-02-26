@@ -467,11 +467,12 @@
                         '<img src="' + avatar + '" alt="' + name + '" title="' + name + '" />' +
                         '<div class="conversation-message-body">' + bodyHtml + '</div>' +
                         '</div>' +
-                        '';
+                        '<div class="conversation-message-meta">';
                     if (direction === 'from') {
-                        html += '<small class="fa fa-trash-alt text-danger text-nowrap ms-2 mt-1 message-delete"></small>';
+                        html += '<small class="fa fa-trash-alt text-danger text-nowrap message-delete"></small>';
                     }
-                    html += '<small class="text-muted small text-nowrap mt-1 conversation-message-date" data-message-date="' + created_at + '">' + created_at + '</small>' +
+                    html += '<small class="text-muted small text-nowrap conversation-message-date" data-message-date="' + created_at + '">' + created_at + '</small>' +
+                        '</div>' +
                         '</li>';
 
                     return html;

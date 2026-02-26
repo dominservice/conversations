@@ -114,12 +114,16 @@ class MessageRead implements ShouldBroadcast
             'conversation_uuid' => $this->conversationUuid,
             'user_id' => $this->userId,
             'user' => $user ? [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
+                'id' => (string) ($user->{$user->getKeyName()} ?? $user->uuid ?? $user->id ?? ''),
+                'uuid' => (string) ($user->uuid ?? ''),
+                'name' => (string) ($user->name ?? $user->full_name ?? $user->username ?? ''),
+                'full_name' => (string) ($user->full_name ?? $user->name ?? ''),
+                'username' => (string) ($user->username ?? ''),
+                'email' => (string) ($user->email ?? ''),
+                'avatar_path' => (string) ($user->avatar_path ?? ''),
             ] : null,
             'read_at' => now()->toIso8601String(),
-            'read_by' => $readBy,
+            'read_by' => $readBy->values()->all(),
             'read_count' => $readBy->count(),
         ];
     }
