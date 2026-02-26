@@ -9,7 +9,7 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Dominservice\Conversations\Models\Eloquent\ConversationMessageStatus;
+use Dominservice\Conversations\Models\Eloquent\Conversation;
 
 class MessageRead implements ShouldBroadcast
 {
@@ -37,6 +37,13 @@ class MessageRead implements ShouldBroadcast
     public $userId;
 
     /**
+     * Participant IDs in the conversation.
+     *
+     * @var array<int, string>
+     */
+    public $participantIds = [];
+
+    /**
      * Create a new event instance.
      *
      * @param  string  $conversationUuid
@@ -49,6 +56,7 @@ class MessageRead implements ShouldBroadcast
         $this->conversationUuid = $conversationUuid;
         $this->messageId = $messageId;
         $this->userId = $userId;
+        $this->participantIds = $this->resolveParticipantIds();
     }
 
     /**
@@ -59,7 +67,17 @@ class MessageRead implements ShouldBroadcast
     public function broadcastOn()
     {
         $channelPrefix = config('conversations.broadcasting.channel_prefix', 'conversation');
-        return new PrivateChannel("{$channelPrefix}.{$this->conversationUuid}");
+        $channels = [
+            new PrivateChannel("{$channelPrefix}.{$this->conversationUuid}"),
+        ];
+
+        if ((bool) config('conversations.broadcasting.user_channel_events.message_read', true)) {
+            foreach ($this->participantIds as $participantId) {
+                $channels[] = new PrivateChannel("{$channelPrefix}.user.{$participantId}");
+            }
+        }
+
+        return $channels;
     }
 
     /**
@@ -79,9 +97,14 @@ class MessageRead implements ShouldBroadcast
      */
     public function broadcastWith()
     {
-        // Get the user who read the message
         $userModel = config('conversations.user_model');
-        $user = $userModel::find($this->userId);
+        $user = null;
+        if (is_string($userModel) && class_exists($userModel)) {
+            $model = new $userModel();
+            $user = $userModel::query()
+                ->where($model->getKeyName(), $this->userId)
+                ->first();
+        }
 
         // Get all users who have read this message
         $readBy = app('conversations')->getMessageReadBy($this->messageId);
@@ -99,5 +122,30 @@ class MessageRead implements ShouldBroadcast
             'read_by' => $readBy,
             'read_count' => $readBy->count(),
         ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function resolveParticipantIds(): array
+    {
+        $conversation = Conversation::query()
+            ->with('users')
+            ->where('uuid', $this->conversationUuid)
+            ->first();
+
+        if (!$conversation) {
+            return [];
+        }
+
+        return $conversation->users
+            ->map(function ($user) {
+                $id = $user?->{$user?->getKeyName() ?? 'id'} ?? $user?->uuid ?? $user?->id ?? null;
+                return (string) ($id ?? '');
+            })
+            ->filter(static fn ($id) => $id !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 }

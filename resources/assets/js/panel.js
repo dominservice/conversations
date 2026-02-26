@@ -16,6 +16,7 @@ var Conversations = function () {
     let deleteMessageRoute;
     let getMessagesRoute;
     let typingRoute;
+    let conversationsIndexRoute;
     let addMessageCallback;
     let modalContacts = null;
     let messagesOffset = 0;
@@ -28,6 +29,8 @@ var Conversations = function () {
     let messagesRequestInFlight = false;
     let messagesRefreshQueued = false;
     let messageSyncIntervalId = null;
+    let subscribedConversationChannels = {};
+    let processedRealtimeMessageMap = {};
     let texts = {};
 
     const MESSAGE_BATCH_SIZE = 20;
@@ -107,6 +110,7 @@ var Conversations = function () {
         if (typeof params.delete_message_route !== 'undefined') { deleteMessageRoute = params.delete_message_route; }
         if (typeof params.get_messages_route !== 'undefined') { getMessagesRoute = params.get_messages_route; }
         if (typeof params.typing_route !== 'undefined') { typingRoute = params.typing_route; }
+        if (typeof params.conversations_index_route !== 'undefined') { conversationsIndexRoute = params.conversations_index_route; }
         if (typeof params.container !== 'undefined') { containerConv = params.container; }
         if (typeof params.messages_container !== 'undefined') { containerMessages = params.messages_container; }
         if (typeof params.token !== 'undefined') { token = params.token; }
@@ -424,6 +428,13 @@ var Conversations = function () {
     };
 
     const markAsRead = (messageId) => {
+        if (conversationUuid) {
+            const activeConversationItem = $('.conversations-list-items').find('.contact[data-conversation-uuid="' + conversationUuid + '"]').first();
+            if (activeConversationItem.length) {
+                activeConversationItem.find('.conversation-count-new-messages').text('').hide();
+            }
+        }
+
         if (!markAsReadRoute) {
             return;
         }
@@ -462,20 +473,132 @@ var Conversations = function () {
         return routePath + '/' + conversationId + (routeQuery ? '?' + routeQuery : '');
     };
 
-    const updateConversationPreview = (message) => {
-        const preview = $('.contact.active .preview');
-        if (!preview.length || !message) {
+    const escapeHtml = (value) => {
+        return $('<div/>').text((value ?? '').toString()).html();
+    };
+
+    const getConversationListItem = (targetConversationUuid) => {
+        const normalizedUuid = (targetConversationUuid || '').toString().trim();
+        if (normalizedUuid === '') {
+            return $();
+        }
+
+        return $('.conversations-list-items').find('.contact[data-conversation-uuid="' + normalizedUuid + '"]').first();
+    };
+
+    const getConversationUnreadCount = (conversationItem) => {
+        const badge = conversationItem.find('.conversation-count-new-messages').first();
+        if (!badge.length) {
+            return 0;
+        }
+
+        const parsed = parseInt((badge.text() || '0').toString().trim(), 10);
+        if (Number.isNaN(parsed)) {
+            return 0;
+        }
+
+        return Math.max(parsed, 0);
+    };
+
+    const setConversationUnreadCount = (conversationItem, count) => {
+        const badge = conversationItem.find('.conversation-count-new-messages').first();
+        if (!badge.length) {
             return;
         }
 
-        const senderId = resolveSenderId(message);
-        const senderMeta = resolveUserMeta(senderId);
-        const senderLabel = isCurrentUserIdentifier(senderId)
-            ? t('You', 'You')
-            : senderMeta?.username || message.sender_name || message.sender?.username || '@user';
-        const content = (message.content || '').toString().trim();
+        const parsed = parseInt((count ?? 0).toString(), 10);
+        const normalizedCount = Number.isNaN(parsed) ? 0 : Math.max(parsed, 0);
 
-        preview.html('<span>' + senderLabel + ': </span>' + (content !== '' ? content : t('Attachment', 'Attachment')));
+        if (normalizedCount > 0) {
+            badge.text(String(normalizedCount)).show();
+            return;
+        }
+
+        badge.text('').hide();
+    };
+
+    const moveConversationToTop = (conversationItem) => {
+        const list = conversationItem.closest('ul');
+        if (!list.length) {
+            return;
+        }
+
+        list.prepend(conversationItem);
+    };
+
+    const updateConversationSearchData = (conversationItem) => {
+        const name = (conversationItem.find('.name').first().text() || '').toString().trim();
+        const preview = (conversationItem.find('.preview').first().text() || '').toString().trim();
+        const relation = (conversationItem.find('.conversation-relation-badge').first().text() || '').toString().trim();
+        const haystack = [name, preview, relation].filter((chunk) => chunk !== '').join(' ').toLowerCase();
+        conversationItem.attr('data-conversation-title', haystack);
+    };
+
+    const resolveMessagePreviewText = (message) => {
+        const text = (message?.content || '').toString().trim();
+        if (text !== '') {
+            return text;
+        }
+
+        return t('Attachment', 'Attachment');
+    };
+
+    const resolvePreviewSenderLabel = (message, conversationItem) => {
+        const senderId = resolveSenderId(message);
+        if (isCurrentUserIdentifier(senderId)) {
+            return t('You', 'You');
+        }
+
+        const senderMeta = resolveUserMeta(senderId);
+        if (senderMeta?.username) {
+            return senderMeta.username;
+        }
+
+        const payloadSenderName = (message?.sender_name || message?.sender?.username || message?.sender?.name || '').toString().trim();
+        if (payloadSenderName !== '') {
+            return payloadSenderName;
+        }
+
+        const isGroup = ((conversationItem?.attr('data-conversation-is-group') || '').toString() === '1');
+        if (!isGroup) {
+            const itemName = (conversationItem?.find('.name').first().text() || '').toString().trim();
+            if (itemName !== '') {
+                return itemName;
+            }
+        }
+
+        return '@user';
+    };
+
+    const updateConversationListEntry = (targetConversationUuid, message, options = {}) => {
+        const conversationItem = getConversationListItem(targetConversationUuid);
+        if (!conversationItem.length) {
+            return;
+        }
+
+        const nameEl = conversationItem.find('.name').first();
+        if (nameEl.length && (nameEl.text() || '').toString().trim() === '') {
+            nameEl.text(t('Conversation', 'Conversation'));
+        }
+
+        const previewEl = conversationItem.find('.preview').first();
+        if (previewEl.length && message) {
+            const senderLabel = resolvePreviewSenderLabel(message, conversationItem);
+            const previewText = resolveMessagePreviewText(message);
+            previewEl.html('<span>' + escapeHtml(senderLabel) + ':</span> ' + escapeHtml(previewText));
+        }
+
+        if (options.bump !== false) {
+            moveConversationToTop(conversationItem);
+        }
+
+        if (options.resetUnread === true) {
+            setConversationUnreadCount(conversationItem, 0);
+        } else if (options.incrementUnread === true) {
+            setConversationUnreadCount(conversationItem, getConversationUnreadCount(conversationItem) + 1);
+        }
+
+        updateConversationSearchData(conversationItem);
     };
 
     const fetchMessageAttachments = (message) => {
@@ -524,6 +647,48 @@ var Conversations = function () {
         ).toString();
     };
 
+    const buildRealtimeMessageKey = (payload) => {
+        const normalizedPayload = unwrapEventPayload(payload) || payload || {};
+        const conversationKey = resolveConversationUuidFromPayload(normalizedPayload)
+            || resolveConversationUuidFromPayload(payload)
+            || '';
+        const messageId = (
+            normalizedPayload?.id
+            || normalizedPayload?.message_id
+            || payload?.id
+            || payload?.message_id
+            || ''
+        ).toString();
+
+        if (conversationKey === '' || messageId === '') {
+            return '';
+        }
+
+        return conversationKey + ':' + messageId;
+    };
+
+    const shouldProcessRealtimeMessage = (payload) => {
+        const key = buildRealtimeMessageKey(payload);
+        if (key === '') {
+            return true;
+        }
+
+        if (processedRealtimeMessageMap[key]) {
+            return false;
+        }
+
+        processedRealtimeMessageMap[key] = Date.now();
+
+        const cutoff = Date.now() - (5 * 60 * 1000);
+        Object.keys(processedRealtimeMessageMap).forEach((storedKey) => {
+            if (processedRealtimeMessageMap[storedKey] < cutoff) {
+                delete processedRealtimeMessageMap[storedKey];
+            }
+        });
+
+        return true;
+    };
+
     const handleIncomingMessage = (message) => {
         const eventMessage = unwrapEventPayload(message);
         if (!eventMessage) {
@@ -546,7 +711,9 @@ var Conversations = function () {
             setMessage(containerConv, resolvedMessage, null, null, null, null, null, false, null, 'append');
             scrollToEnd();
             humanizeDate();
-            updateConversationPreview(resolvedMessage);
+            updateConversationListEntry(payloadConversationUuid, resolvedMessage, {
+                resetUnread: true,
+            });
             markAsRead(resolvedMessage.id || resolvedMessage.message_id || null);
         });
     };
@@ -716,6 +883,142 @@ var Conversations = function () {
         $(containerConv).find('.conversations-messages-items').after('<div class="conversation-typing-indicator text-muted small px-4 py-2">' + label + '</div>');
     };
 
+    const bindConversationRealtimeChannel = (pusher, targetConversationUuid) => {
+        const normalizedUuid = (targetConversationUuid || '').toString().trim();
+        if (normalizedUuid === '' || subscribedConversationChannels[normalizedUuid]) {
+            return;
+        }
+
+        const conversationChannel = typeof PusherConnect.subscribe === 'function'
+            ? PusherConnect.subscribe(pusher, 'private-conversation.' + normalizedUuid)
+            : pusher.subscribe('private-conversation.' + normalizedUuid);
+
+        if (!conversationChannel) {
+            return;
+        }
+
+        subscribedConversationChannels[normalizedUuid] = conversationChannel;
+
+        conversationChannel.bind('message.sent', function (payload) {
+            debugRealtime('event message.sent', payload);
+            const eventMessage = unwrapEventPayload(payload);
+            if (!eventMessage) {
+                return;
+            }
+
+            if (!shouldProcessRealtimeMessage(eventMessage)) {
+                return;
+            }
+
+            const payloadConversationUuid = resolveConversationUuidFromPayload(eventMessage)
+                || resolveConversationUuidFromPayload(payload)
+                || normalizedUuid;
+            const senderId = resolveSenderId(eventMessage);
+            const isSenderCurrentUser = isCurrentUserIdentifier(senderId);
+            const isCurrentConversation = conversationUuid && payloadConversationUuid === conversationUuid;
+
+            updateConversationListEntry(payloadConversationUuid, eventMessage, {
+                incrementUnread: !isSenderCurrentUser && !isCurrentConversation,
+                resetUnread: isCurrentConversation,
+            });
+
+            if (!isCurrentConversation || isSenderCurrentUser) {
+                return;
+            }
+
+            handleIncomingMessage(eventMessage);
+        });
+
+        conversationChannel.bind('message.deleted', function (payload) {
+            debugRealtime('event message.deleted', payload);
+            const eventPayload = unwrapEventPayload(payload) || {};
+            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload) || normalizedUuid;
+            if (payloadConversationUuid === conversationUuid) {
+                $('.conversations-messages-item[data-message-id="' + (eventPayload.message_id || eventPayload.id) + '"]').remove();
+            }
+        });
+
+        conversationChannel.bind('message.edited', function (payload) {
+            debugRealtime('event message.edited', payload);
+            const eventPayload = unwrapEventPayload(payload) || {};
+            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload) || normalizedUuid;
+
+            updateConversationListEntry(payloadConversationUuid, eventPayload, { bump: false });
+
+            if (payloadConversationUuid !== conversationUuid) {
+                return;
+            }
+
+            const messageId = eventPayload.message_id || eventPayload.id || null;
+            if (!messageId) {
+                return;
+            }
+
+            const messageEl = $('.conversations-messages-item[data-message-id="' + messageId + '"]');
+            if (!messageEl.length) {
+                return;
+            }
+
+            const content = (eventPayload.content || '').toString();
+            messageEl.find('p').first().text(content);
+            const date = eventPayload.created_at || eventPayload.updated_at || null;
+            if (date) {
+                const dateEl = messageEl.find('.conversation-message-date').first();
+                dateEl.attr('data-message-date', date);
+                dateEl.text(date);
+                humanizeDate();
+            }
+        });
+
+        conversationChannel.bind('message.read', function (payload) {
+            debugRealtime('event message.read', payload);
+            const eventPayload = unwrapEventPayload(payload) || {};
+            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload) || normalizedUuid;
+            const listConversation = getConversationListItem(payloadConversationUuid);
+            if (!listConversation.length) {
+                return;
+            }
+
+            if (payloadConversationUuid === conversationUuid || isCurrentUserIdentifier((eventPayload.user_id || eventPayload.userId || '').toString())) {
+                setConversationUnreadCount(listConversation, 0);
+            }
+        });
+
+        conversationChannel.bind('user.typing', function (payload) {
+            debugRealtime('event user.typing', payload);
+            const eventPayload = unwrapEventPayload(payload) || {};
+            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload) || normalizedUuid;
+            if (isCurrentUserIdentifier((eventPayload.user_id || eventPayload.userId || '').toString()) || payloadConversationUuid !== conversationUuid) {
+                return;
+            }
+
+            const typingUserId = (eventPayload.user_id || eventPayload.userId || '').toString();
+            if (typingUsersTimers[typingUserId]) {
+                clearTimeout(typingUsersTimers[typingUserId]);
+            }
+
+            typingUsersTimers[typingUserId] = setTimeout(function () {
+                delete typingUsersTimers[typingUserId];
+                renderTypingIndicator();
+            }, 2500);
+
+            renderTypingIndicator();
+        });
+    };
+
+    const subscribeListedConversationChannels = (pusher) => {
+        $('.conversations-list-items .contact').each(function () {
+            const rowConversationUuid = ($(this).data('conversationUuid') || $(this).attr('data-conversation-uuid') || '').toString().trim();
+            if (rowConversationUuid !== '') {
+                bindConversationRealtimeChannel(pusher, rowConversationUuid);
+            }
+        });
+
+        if (conversationUuid) {
+            bindConversationRealtimeChannel(pusher, conversationUuid);
+        }
+    };
+
     const connectRealtime = () => {
         const dso = resolveDSO();
         const realtimeConfig = dso.config('realtime') || {};
@@ -748,107 +1051,67 @@ var Conversations = function () {
                 ? PusherConnect.subscribe(pusher, 'private-conversation.user.' + userId)
                 : pusher.subscribe('private-conversation.user.' + userId);
 
-            userChannel.bind('conversation.created', function () {
-                debugRealtime('event conversation.created', { channel: userChannel.name });
+            userChannel.bind('message.sent', function (payload) {
+                debugRealtime('event user.message.sent', payload);
+                const eventMessage = unwrapEventPayload(payload);
+                if (!eventMessage) {
+                    return;
+                }
+
+                if (!shouldProcessRealtimeMessage(eventMessage)) {
+                    return;
+                }
+
+                const payloadConversationUuid = resolveConversationUuidFromPayload(eventMessage)
+                    || resolveConversationUuidFromPayload(payload);
+                if (!payloadConversationUuid) {
+                    return;
+                }
+
+                const senderId = resolveSenderId(eventMessage);
+                const isSenderCurrentUser = isCurrentUserIdentifier(senderId);
+                const isCurrentConversation = conversationUuid && payloadConversationUuid === conversationUuid;
+
+                updateConversationListEntry(payloadConversationUuid, eventMessage, {
+                    incrementUnread: !isSenderCurrentUser && !isCurrentConversation,
+                    resetUnread: isCurrentConversation,
+                });
+
+                if (!isCurrentConversation || isSenderCurrentUser) {
+                    return;
+                }
+
+                handleIncomingMessage(eventMessage);
+            });
+
+            userChannel.bind('message.read', function (payload) {
+                debugRealtime('event user.message.read', payload);
+                const eventPayload = unwrapEventPayload(payload) || {};
+                const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload)
+                    || resolveConversationUuidFromPayload(payload);
+                if (!payloadConversationUuid) {
+                    return;
+                }
+
+                if (payloadConversationUuid === conversationUuid || isCurrentUserIdentifier((eventPayload.user_id || eventPayload.userId || '').toString())) {
+                    const listConversation = getConversationListItem(payloadConversationUuid);
+                    if (listConversation.length) {
+                        setConversationUnreadCount(listConversation, 0);
+                    }
+                }
+            });
+
+            userChannel.bind('conversation.created', function (payload) {
+                debugRealtime('event conversation.created', { channel: userChannel.name, payload: payload });
+                const payloadConversationUuid = resolveConversationUuidFromPayload(payload);
+                if (payloadConversationUuid) {
+                    bindConversationRealtimeChannel(pusher, payloadConversationUuid);
+                }
                 window.location.reload();
             });
         }
 
-        if (!conversationUuid) {
-            startMessageSyncFallback();
-            return;
-        }
-
-        const conversationChannel = typeof PusherConnect.subscribe === 'function'
-            ? PusherConnect.subscribe(pusher, 'private-conversation.' + conversationUuid)
-            : pusher.subscribe('private-conversation.' + conversationUuid);
-
-        conversationChannel.bind('message.sent', function (payload) {
-            debugRealtime('event message.sent', payload);
-            const eventMessage = unwrapEventPayload(payload);
-            if (!eventMessage) {
-                return;
-            }
-
-            if (isCurrentUserIdentifier(resolveSenderId(eventMessage))) {
-                return;
-            }
-
-            handleIncomingMessage(eventMessage);
-        });
-
-        conversationChannel.bind('message.deleted', function (payload) {
-            debugRealtime('event message.deleted', payload);
-            const eventPayload = unwrapEventPayload(payload) || {};
-            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload);
-            if (payloadConversationUuid === conversationUuid) {
-                $('.conversations-messages-item[data-message-id="' + (eventPayload.message_id || eventPayload.id) + '"]').remove();
-            }
-        });
-
-        conversationChannel.bind('message.edited', function (payload) {
-            debugRealtime('event message.edited', payload);
-            const eventPayload = unwrapEventPayload(payload) || {};
-            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload);
-            if (payloadConversationUuid !== conversationUuid) {
-                return;
-            }
-
-            const messageId = eventPayload.message_id || eventPayload.id || null;
-            if (!messageId) {
-                return;
-            }
-
-            const messageEl = $('.conversations-messages-item[data-message-id="' + messageId + '"]');
-            if (!messageEl.length) {
-                return;
-            }
-
-            const content = (eventPayload.content || '').toString();
-            messageEl.find('p').first().text(content);
-            const date = eventPayload.created_at || eventPayload.updated_at || null;
-            if (date) {
-                const dateEl = messageEl.find('.conversation-message-date').first();
-                dateEl.attr('data-message-date', date);
-                dateEl.text(date);
-                humanizeDate();
-            }
-        });
-
-        conversationChannel.bind('message.read', function (payload) {
-            debugRealtime('event message.read', payload);
-            const eventPayload = unwrapEventPayload(payload) || {};
-            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload);
-            if (payloadConversationUuid !== conversationUuid) {
-                return;
-            }
-
-            const listConversation = $('.conversations-list-items').find('[data-conversation-uuid="' + payloadConversationUuid + '"]');
-            if (listConversation.length) {
-                listConversation.find('.conversation-count-new-messages').hide();
-            }
-        });
-
-        conversationChannel.bind('user.typing', function (payload) {
-            debugRealtime('event user.typing', payload);
-            const eventPayload = unwrapEventPayload(payload) || {};
-            const payloadConversationUuid = resolveConversationUuidFromPayload(eventPayload);
-            if (isCurrentUserIdentifier((eventPayload.user_id || eventPayload.userId || '').toString()) || payloadConversationUuid !== conversationUuid) {
-                return;
-            }
-
-            const typingUserId = (eventPayload.user_id || eventPayload.userId || '').toString();
-            if (typingUsersTimers[typingUserId]) {
-                clearTimeout(typingUsersTimers[typingUserId]);
-            }
-
-            typingUsersTimers[typingUserId] = setTimeout(function () {
-                delete typingUsersTimers[typingUserId];
-                renderTypingIndicator();
-            }, 2500);
-
-            renderTypingIndicator();
-        });
+        subscribeListedConversationChannels(pusher);
 
         startMessageSyncFallback();
     };
@@ -960,7 +1223,9 @@ var Conversations = function () {
             }
 
             setMessage(containerConv, message, null, null, null, null, null, false);
-            updateConversationPreview(message);
+            updateConversationListEntry(conversationUuid, message, {
+                resetUnread: true,
+            });
             scrollToEnd();
             humanizeDate();
             markAsRead(message.id || message.message_id || null);

@@ -3,6 +3,8 @@
 namespace Dominservice\Conversations\Http\Controllers\Web;
 
 use Dominservice\Conversations\Http\Controllers\Controller;
+use Dominservice\Conversations\Models\Eloquent\Conversation;
+use Dominservice\Conversations\Models\Eloquent\ConversationMessage;
 use Dominservice\Conversations\Models\Eloquent\ConversationUser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,16 +27,7 @@ class ConversationPanelController extends Controller
         $authUser = $request->user();
         $userId = $this->resolveCurrentUserId();
         $conversations = $this->resolveConversationsForPanel($request, $authUser, $userId);
-        $conversations = $conversations->map(function ($conversation) {
-            $resolvedUuid = $this->resolveConversationUuid($conversation);
-            if ($resolvedUuid !== '' && empty($conversation->uuid)) {
-                $conversation->uuid = $resolvedUuid;
-            }
-
-            $this->hydrateConversationForPanel($conversation);
-
-            return $conversation;
-        })->values();
+        $conversations = $this->hydrateConversationCollectionForPanel($conversations);
 
         $currentConversation = null;
         if (!empty($uuid)) {
@@ -515,6 +508,73 @@ class ConversationPanelController extends Controller
             'relations.uuidParent',
             'relations.ulidParent',
         ]);
+    }
+
+    /**
+     * Ensure list conversations have complete data for names, avatars and preview.
+     *
+     * @param Collection $conversations
+     * @return Collection
+     */
+    protected function hydrateConversationCollectionForPanel(Collection $conversations): Collection
+    {
+        $uuids = $conversations
+            ->map(fn ($conversation) => $this->resolveConversationUuid($conversation))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($uuids->isEmpty()) {
+            return $conversations->values();
+        }
+
+        $hydratedByUuid = Conversation::query()
+            ->with([
+                'type',
+                'owner',
+                'participants',
+                'users',
+                'lastMessage.sender',
+                'relations',
+                'relations.parent',
+                'relations.uuidParent',
+                'relations.ulidParent',
+            ])
+            ->whereIn('uuid', $uuids->all())
+            ->get()
+            ->keyBy('uuid');
+
+        $latestMessagesByConversation = ConversationMessage::query()
+            ->with('sender')
+            ->whereIn('conversation_uuid', $uuids->all())
+            ->orderByDesc('created_at')
+            ->get()
+            ->unique('conversation_uuid')
+            ->keyBy('conversation_uuid');
+
+        return $conversations->map(function ($conversation) use ($hydratedByUuid, $latestMessagesByConversation) {
+            $resolvedUuid = $this->resolveConversationUuid($conversation);
+
+            if ($resolvedUuid !== '' && $hydratedByUuid->has($resolvedUuid)) {
+                $conversation = $hydratedByUuid->get($resolvedUuid);
+            } else {
+                if ($resolvedUuid !== '' && is_object($conversation) && empty($conversation->uuid)) {
+                    $conversation->uuid = $resolvedUuid;
+                }
+
+                $this->hydrateConversationForPanel($conversation);
+            }
+
+            if ($resolvedUuid !== ''
+                && is_object($conversation)
+                && method_exists($conversation, 'setRelation')
+                && $latestMessagesByConversation->has($resolvedUuid)
+            ) {
+                $conversation->setRelation('lastMessage', $latestMessagesByConversation->get($resolvedUuid));
+            }
+
+            return $conversation;
+        })->values();
     }
 
     /**

@@ -105,7 +105,8 @@ class Conversation extends Model
 
     public function lastMessage()
     {
-        return $this->hasOne(ConversationMessage::class, 'conversation_uuid', 'uuid');
+        return $this->hasOne(ConversationMessage::class, 'conversation_uuid', 'uuid')
+            ->latestOfMany('created_at');
     }
 
     public function owner()

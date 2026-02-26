@@ -360,6 +360,13 @@ return array(
             'user_typing' => true,
         ],
 
+        // Additionally broadcast selected events to user-scoped channels:
+        // private-conversation.user.{user_uuid}
+        'user_channel_events' => [
+            'message_sent' => env('CONVERSATIONS_USER_CHANNEL_MESSAGE_SENT', true),
+            'message_read' => env('CONVERSATIONS_USER_CHANNEL_MESSAGE_READ', true),
+        ],
+
         // Driver-specific configurations
         'drivers' => [
             'pusher' => [
