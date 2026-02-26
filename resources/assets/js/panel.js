@@ -469,6 +469,19 @@ var Conversations = function () {
             .replace(/>/g, '&gt;');
     };
 
+    const renderReceiptTickIcon = (isRead) => {
+        if (isRead) {
+            return '<svg class="conversation-read-receipt-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">' +
+                '<path d="M1.8 8.6l2.1 2.1L9.6 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
+                '<path d="M6 8.6l2.1 2.1L13.8 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
+                '</svg>';
+        }
+
+        return '<svg class="conversation-read-receipt-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">' +
+            '<path d="M4 8.6l2.1 2.1L12 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
+            '</svg>';
+    };
+
     const parseReceiptStateValue = (rawValue) => {
         if (Array.isArray(rawValue)) {
             return normalizeReceiptUserIds(rawValue);
@@ -549,13 +562,13 @@ var Conversations = function () {
 
                 receiptHtml =
                     '<span class="conversation-read-receipt-state is-read" title="' + tooltip + '">' +
-                    '<i class="fa fa-check-double"></i>' +
+                    renderReceiptTickIcon(true) +
                     '</span>' +
                     '<img class="conversation-read-receipt-avatar" src="' + readerAvatar + '" alt="' + escapeReceiptText(readerName) + '" title="' + tooltip + '">';
             } else {
                 receiptHtml =
                     '<span class="conversation-read-receipt-state is-sent" title="' + escapeReceiptText(sentLabel) + '">' +
-                    '<i class="fa fa-check"></i>' +
+                    renderReceiptTickIcon(false) +
                     '</span>';
             }
         } else {
@@ -590,7 +603,7 @@ var Conversations = function () {
 
             receiptHtml =
                 '<span class="conversation-read-receipt-state ' + (readBy.length > 0 ? 'is-read' : 'is-sent') + '" title="' + readTooltip + '">' +
-                '<i class="fa ' + (readBy.length > 0 ? 'fa-check-double' : 'fa-check') + '"></i>' +
+                renderReceiptTickIcon(readBy.length > 0) +
                 '</span>' +
                 avatarsHtml +
                 unreadHtml;
