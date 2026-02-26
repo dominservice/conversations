@@ -72,13 +72,18 @@
     $currentConversationUuid = $currentConversation ? $resolveConversationUuid($currentConversation) : '';
     $panelCss = config('conversations.ui.assets.css');
     $panelJs = config('conversations.ui.assets.js');
-    $currentConversationOwnerId = (string) (
-        $currentConversation?->owner?->{$currentConversation?->owner?->getKeyName() ?? 'id'}
-        ?? $currentConversation?->owner?->uuid
-        ?? $currentConversation?->owner?->id
-        ?? ''
-    );
-    $canManageConversation = $currentConversationOwnerId !== '' && $currentConversationOwnerId === $authUserId;
+    $authUserIdentifiers = collect([
+        $authUser?->{$authUser?->getKeyName() ?? 'id'} ?? null,
+        $authUser?->id ?? null,
+        $authUser?->uuid ?? null,
+    ])->map(static fn ($value) => trim((string) $value))->filter()->unique()->values()->all();
+    $ownerIdentifiers = collect([
+        $currentConversation?->owner_uuid ?? null,
+        $currentConversation?->owner?->{$currentConversation?->owner?->getKeyName() ?? 'id'} ?? null,
+        $currentConversation?->owner?->id ?? null,
+        $currentConversation?->owner?->uuid ?? null,
+    ])->map(static fn ($value) => trim((string) $value))->filter()->unique()->values()->all();
+    $canManageConversation = !empty(array_intersect($authUserIdentifiers, $ownerIdentifiers));
 @endphp
 
 <link rel="stylesheet" href="{{ asset($panelCss) }}">

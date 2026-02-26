@@ -57,6 +57,21 @@ class ConversationPanelController extends Controller
         if ($currentConversation) {
             $currentConversationUuid = $this->resolveConversationUuid($currentConversation);
             if ($currentConversationUuid !== '') {
+                $needsHydration = empty($currentConversation->owner_uuid)
+                    || !isset($currentConversation->owner)
+                    || !isset($currentConversation->users)
+                    || !isset($currentConversation->participants);
+
+                if ($needsHydration) {
+                    $hydratedConversation = app('conversations')->get($currentConversationUuid);
+                    if ($hydratedConversation && app('conversations')->existsUser($currentConversationUuid, $userId)) {
+                        $hydratedConversation->loadMissing(['type', 'owner', 'participants', 'users', 'lastMessage.sender']);
+                        $currentConversation = $hydratedConversation;
+                    }
+                } else {
+                    $currentConversation->loadMissing(['type', 'owner', 'participants', 'users', 'lastMessage.sender']);
+                }
+
                 app('conversations')->markReadAll($currentConversationUuid, $userId);
             }
         }
