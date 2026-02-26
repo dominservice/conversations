@@ -449,6 +449,26 @@ var Conversations = function () {
             || normalizedUserId;
     };
 
+    const resolveReceiptUserAvatar = (userId) => {
+        const normalizedUserId = normalizeUserId(userId);
+        const userMeta = normalizedUserId !== '' ? resolveUserMeta(normalizedUserId) : null;
+
+        return normalizeAvatarPath(
+            userMeta?.avatar_path
+            || userMeta?.avatar
+            || DEFAULT_AVATAR
+        );
+    };
+
+    const escapeReceiptText = (value) => {
+        return (value ?? '')
+            .toString()
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    };
+
     const parseReceiptStateValue = (rawValue) => {
         if (Array.isArray(rawValue)) {
             return normalizeReceiptUserIds(rawValue);
@@ -512,23 +532,68 @@ var Conversations = function () {
         const unreadBy = state.unreadBy.filter((id) => id !== senderId && !readBy.includes(id));
         const isGroupConversation = isGroupConversationContext();
 
-        let receiptText = '';
+        const readNames = readBy.map((id) => resolveReceiptUserDisplayName(id));
+        const unreadNames = unreadBy.map((id) => resolveReceiptUserDisplayName(id));
+        const readByLabel = t('read_by', 'Read by');
+        const unreadByLabel = t('unread_by', 'Unread by');
+        const sentLabel = t('sent', 'Sent');
+        const readLabel = t('read', 'Read');
+
+        let receiptHtml = '';
         if (!isGroupConversation) {
-            receiptText = readBy.length > 0
-                ? t('read', 'Read')
-                : t('sent', 'Sent');
-        } else {
-            const chunks = [];
             if (readBy.length > 0) {
-                chunks.push(t('read_by', 'Read by') + ': ' + readBy.map((id) => resolveReceiptUserDisplayName(id)).join(', '));
+                const readerId = readBy[readBy.length - 1];
+                const readerName = resolveReceiptUserDisplayName(readerId);
+                const readerAvatar = resolveReceiptUserAvatar(readerId);
+                const tooltip = escapeReceiptText(readByLabel + ': ' + readerName);
+
+                receiptHtml =
+                    '<span class="conversation-read-receipt-state is-read" title="' + tooltip + '">' +
+                    '<i class="fa fa-check-double"></i>' +
+                    '</span>' +
+                    '<img class="conversation-read-receipt-avatar" src="' + readerAvatar + '" alt="' + escapeReceiptText(readerName) + '" title="' + tooltip + '">';
+            } else {
+                receiptHtml =
+                    '<span class="conversation-read-receipt-state is-sent" title="' + escapeReceiptText(sentLabel) + '">' +
+                    '<i class="fa fa-check"></i>' +
+                    '</span>';
             }
+        } else {
+            const readTooltip = readBy.length > 0
+                ? escapeReceiptText(readByLabel + ': ' + readNames.join(', '))
+                : escapeReceiptText(readLabel);
+
+            let avatarsHtml = '';
+            if (readBy.length > 0) {
+                const maxVisible = 3;
+                const visibleReaders = readBy.slice(0, maxVisible);
+                const extraReaders = readBy.length - visibleReaders.length;
+                const avatarItems = visibleReaders.map((readerId) => {
+                    const readerName = resolveReceiptUserDisplayName(readerId);
+                    const readerAvatar = resolveReceiptUserAvatar(readerId);
+                    return '<img class="conversation-read-receipt-avatar" src="' + readerAvatar + '" alt="' + escapeReceiptText(readerName) + '" title="' + readTooltip + '">';
+                }).join('');
+
+                const extraBadge = extraReaders > 0
+                    ? '<span class="conversation-read-receipt-extra" title="' + readTooltip + '">+' + extraReaders + '</span>'
+                    : '';
+
+                avatarsHtml = '<span class="conversation-read-receipt-avatars">' + avatarItems + extraBadge + '</span>';
+            }
+
+            let unreadHtml = '';
             if (readReceiptsShowUnreadInGroup && unreadBy.length > 0) {
-                chunks.push(t('unread_by', 'Unread by') + ': ' + unreadBy.map((id) => resolveReceiptUserDisplayName(id)).join(', '));
+                unreadHtml = '<span class="conversation-read-receipt-unread" title="' +
+                    escapeReceiptText(unreadByLabel + ': ' + unreadNames.join(', ')) +
+                    '">' + unreadBy.length + '</span>';
             }
-            receiptText = chunks.join(' | ');
-            if (receiptText === '') {
-                receiptText = t('sent', 'Sent');
-            }
+
+            receiptHtml =
+                '<span class="conversation-read-receipt-state ' + (readBy.length > 0 ? 'is-read' : 'is-sent') + '" title="' + readTooltip + '">' +
+                '<i class="fa ' + (readBy.length > 0 ? 'fa-check-double' : 'fa-check') + '"></i>' +
+                '</span>' +
+                avatarsHtml +
+                unreadHtml;
         }
 
         let receiptEl = messageEl.find('.conversation-message-read-receipt').first();
@@ -542,7 +607,7 @@ var Conversations = function () {
             receiptEl = messageEl.find('.conversation-message-read-receipt').first();
         }
 
-        receiptEl.text(receiptText);
+        receiptEl.html(receiptHtml);
     };
 
     const applyMessageReadReceipt = (messageEl, message) => {
