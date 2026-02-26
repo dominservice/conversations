@@ -31,6 +31,8 @@ class ConversationPanelController extends Controller
                 $conversation->uuid = $resolvedUuid;
             }
 
+            $this->hydrateConversationForPanel($conversation);
+
             return $conversation;
         })->values();
 
@@ -45,7 +47,7 @@ class ConversationPanelController extends Controller
             if (!$currentConversation) {
                 $directConversation = app('conversations')->get($uuid);
                 if ($directConversation && app('conversations')->existsUser($uuid, $userId)) {
-                    $directConversation->loadMissing(['type', 'owner', 'participants', 'users', 'lastMessage.sender']);
+                    $this->hydrateConversationForPanel($directConversation);
                     $currentConversation = $directConversation;
                 }
             }
@@ -65,11 +67,11 @@ class ConversationPanelController extends Controller
                 if ($needsHydration) {
                     $hydratedConversation = app('conversations')->get($currentConversationUuid);
                     if ($hydratedConversation && app('conversations')->existsUser($currentConversationUuid, $userId)) {
-                        $hydratedConversation->loadMissing(['type', 'owner', 'participants', 'users', 'lastMessage.sender']);
+                        $this->hydrateConversationForPanel($hydratedConversation);
                         $currentConversation = $hydratedConversation;
                     }
                 } else {
-                    $currentConversation->loadMissing(['type', 'owner', 'participants', 'users', 'lastMessage.sender']);
+                    $this->hydrateConversationForPanel($currentConversation);
                 }
 
                 app('conversations')->markReadAll($currentConversationUuid, $userId);
@@ -303,7 +305,7 @@ class ConversationPanelController extends Controller
             $relation = $authUser->conversations();
             if (method_exists($relation, 'with') && method_exists($relation, 'get')) {
                 $conversations = $relation
-                    ->with(['type', 'owner', 'participants', 'users', 'lastMessage' => function ($query) {
+                    ->with(['type', 'owner', 'participants', 'users', 'relations.parent', 'relations.uuidParent', 'relations.ulidParent', 'lastMessage' => function ($query) {
                         $query->with('sender');
                     }])
                     ->get();
@@ -488,6 +490,31 @@ class ConversationPanelController extends Controller
     protected function resolveProfileUrl($user): string
     {
         return (string) ($user->url ?? '#');
+    }
+
+    /**
+     * Ensure panel conversations have all relations needed for UI badges/header.
+     *
+     * @param mixed $conversation
+     * @return void
+     */
+    protected function hydrateConversationForPanel($conversation): void
+    {
+        if (!is_object($conversation) || !method_exists($conversation, 'loadMissing')) {
+            return;
+        }
+
+        $conversation->loadMissing([
+            'type',
+            'owner',
+            'participants',
+            'users',
+            'lastMessage.sender',
+            'relations',
+            'relations.parent',
+            'relations.uuidParent',
+            'relations.ulidParent',
+        ]);
     }
 
     /**

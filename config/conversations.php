@@ -81,6 +81,16 @@ return array(
             'css' => env('CONVERSATIONS_UI_CSS', 'vendor/conversations/css/panel.css'),
             'js' => env('CONVERSATIONS_UI_JS', 'vendor/conversations/js/panel.js'),
         ],
+
+        // Relation badges displayed in list and conversation header.
+        // Values may be plain labels or translation keys.
+        'relation_labels' => [
+            'announcements' => 'Announcements',
+            'assignments' => 'Assignments',
+            'job_offers' => 'Job offers',
+            'communities' => 'Communities',
+            'miscellaneous' => 'Miscellaneous',
+        ],
     ],
 
     /*

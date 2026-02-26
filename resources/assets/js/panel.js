@@ -960,6 +960,7 @@ var Conversations = function () {
             }
 
             setMessage(containerConv, message, null, null, null, null, null, false);
+            updateConversationPreview(message);
             scrollToEnd();
             humanizeDate();
             markAsRead(message.id || message.message_id || null);

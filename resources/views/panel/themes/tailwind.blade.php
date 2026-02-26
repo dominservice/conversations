@@ -68,8 +68,120 @@
         return (string) ($value ?? '');
     };
 
+    $resolveConversationUsersCount = static function ($conversation): int {
+        $users = collect($conversation->users ?? []);
+        if ($users->isNotEmpty()) {
+            return $users->count();
+        }
+
+        $participants = collect($conversation->participants ?? []);
+        return $participants->count();
+    };
+
+    $isGroupConversation = static function ($conversation) use ($resolveConversationUsersCount): bool {
+        $typeName = (string) ($conversation->type?->name ?? '');
+        if ($typeName === 'support') {
+            return false;
+        }
+
+        if (in_array($typeName, ['single', 'expert', 'cooperation', 'mail'], true)) {
+            return false;
+        }
+
+        return $resolveConversationUsersCount($conversation) > 2;
+    };
+
+    $relationLabelsConfig = (array) config('conversations.ui.relation_labels', []);
+    $normalizeRelationKey = static function (?string $type): string {
+        $value = trim(mb_strtolower((string) $type));
+        if ($value === '') {
+            return '';
+        }
+
+        $value = str_replace('\\', '.', $value);
+        $segments = array_values(array_filter(explode('.', $value)));
+
+        return (string) ($segments ? end($segments) : $value);
+    };
+    $resolveConversationRelation = static function ($conversation) use ($normalizeRelationKey, $relationLabelsConfig): ?array {
+        $relations = collect($conversation->relations ?? []);
+        $relation = $relations->first();
+
+        $parent = $relation?->parent ?? $relation?->uuidParent ?? $relation?->ulidParent ?? null;
+        $rawType = (string) (
+            $relation?->parent_type
+            ?? $relation?->uuid_parent_type
+            ?? $relation?->ulid_parent_type
+            ?? data_get($conversation, 'relation_type')
+            ?? ($parent ? get_class($parent) : '')
+        );
+        $typeKey = $normalizeRelationKey($rawType);
+
+        $announcementTypeRaw = (string) (
+            data_get($parent, 'type')
+            ?? data_get($parent, 'announcement_type')
+            ?? data_get($parent, 'announcementType')
+            ?? ''
+        );
+        $announcementType = $normalizeRelationKey($announcementTypeRaw);
+
+        if ($typeKey === '' && $announcementType === '') {
+            return null;
+        }
+
+        $canonicalType = $typeKey;
+        if (str_contains($typeKey, 'community')) {
+            $canonicalType = 'communities';
+        } elseif (str_contains($typeKey, 'announcement')) {
+            if (in_array($announcementType, ['job', 'jobs', 'job_offers', 'work', 'employment'], true)) {
+                $canonicalType = 'job_offers';
+            } elseif (in_array($announcementType, ['task', 'tasks', 'assignment', 'assignments', 'order', 'orders', 'service', 'services', 'commission'], true)) {
+                $canonicalType = 'assignments';
+            } elseif (in_array($announcementType, ['miscellaneous', 'misc', 'other', 'others', 'various'], true)) {
+                $canonicalType = 'miscellaneous';
+            } else {
+                $canonicalType = 'announcements';
+            }
+        } elseif (str_contains($typeKey, 'job') || str_contains($typeKey, 'employment') || str_contains($typeKey, 'work')) {
+            $canonicalType = 'job_offers';
+        } elseif (str_contains($typeKey, 'task') || str_contains($typeKey, 'assign') || str_contains($typeKey, 'order') || str_contains($typeKey, 'service')) {
+            $canonicalType = 'assignments';
+        } elseif (str_contains($typeKey, 'misc') || str_contains($typeKey, 'other') || str_contains($typeKey, 'various')) {
+            $canonicalType = 'miscellaneous';
+        } elseif ($typeKey === 'announcements') {
+            $canonicalType = 'announcements';
+        }
+
+        $defaultLabels = [
+            'announcements' => __('Announcements'),
+            'assignments' => __('Assignments'),
+            'job_offers' => __('Job offers'),
+            'communities' => __('Communities'),
+            'miscellaneous' => __('Miscellaneous'),
+        ];
+
+        $configuredLabel = (string) ($relationLabelsConfig[$canonicalType] ?? $relationLabelsConfig[$typeKey] ?? '');
+        $label = $configuredLabel !== ''
+            ? __($configuredLabel)
+            : ($defaultLabels[$canonicalType] ?? Str::headline(str_replace('_', ' ', $canonicalType)));
+
+        $title = trim((string) (data_get($parent, 'name') ?? data_get($parent, 'title') ?? data_get($parent, 'slug') ?? ''));
+        $url = trim((string) (data_get($parent, 'url') ?? ''));
+        $description = $title !== '' ? ($label . ': ' . $title) : $label;
+
+        return [
+            'key' => $canonicalType,
+            'label' => $label,
+            'title' => $title,
+            'url' => $url,
+            'description' => $description,
+        ];
+    };
+
     $currentConversationPrimaryParticipant = $currentConversation ? $resolveConversationParticipant($currentConversation) : null;
     $currentConversationUuid = $currentConversation ? $resolveConversationUuid($currentConversation) : '';
+    $currentConversationIsGroup = $currentConversation ? $isGroupConversation($currentConversation) : false;
+    $currentConversationRelation = $currentConversation ? $resolveConversationRelation($currentConversation) : null;
     $panelCss = config('conversations.ui.assets.css');
     $panelJs = config('conversations.ui.assets.js');
 @endphp
@@ -97,33 +209,48 @@
                             $conversationPrimaryParticipant = $resolveConversationParticipant($conversation);
                             $conversationTitle = (string) ($conversation->title ?? '');
                             $conversationPrimaryParticipantName = $resolveConversationUserName($conversationPrimaryParticipant);
-                            $conversationName = match ($conversation->type?->name) {
-                                'group' => __('Group conversation'),
-                                'support' => __('Support'),
-                                default => ($conversationPrimaryParticipantName !== '' ? $conversationPrimaryParticipantName : ($conversationTitle !== '' ? $conversationTitle : __('Conversation'))),
-                            };
+                            $conversationIsGroup = $isGroupConversation($conversation);
+                            $conversationTypeName = (string) ($conversation->type?->name ?? '');
+                            $conversationName = $conversationTypeName === 'support'
+                                ? __('Support')
+                                : ($conversationIsGroup
+                                    ? ($conversationTitle !== '' ? $conversationTitle : __('Group conversation'))
+                                    : ($conversationPrimaryParticipantName !== '' ? $conversationPrimaryParticipantName : ($conversationTitle !== '' ? $conversationTitle : __('Conversation'))));
                             $previewText = trim((string) ($conversation?->lastMessage?->content ?? ''));
+                            $conversationRelation = $resolveConversationRelation($conversation);
+                            $lastMessageType = mb_strtolower(trim((string) ($conversation?->lastMessage?->message_type ?? '')));
+                            $previewTextForDisplay = Str::limit(
+                                $previewText !== ''
+                                    ? $previewText
+                                    : (in_array($lastMessageType, ['attachment', 'file', 'image', 'document', 'video', 'audio'], true) ? __('Attachment') : ''),
+                                60
+                            );
                         @endphp
                         <li
                             class="contact conv-list-item @if($currentConversation && $conversationUuid !== '' && $conversationUuid === $currentConversationUuid) active @endif"
                             data-conversation-uuid="{{ $conversationUuid }}"
-                            data-conversation-title="{{ strtolower($conversationTitle . ' ' . $conversationName . ' ' . $previewText) }}"
+                            data-conversation-title="{{ strtolower($conversationTitle . ' ' . $conversationName . ' ' . $previewTextForDisplay . ' ' . ($conversationRelation['label'] ?? '') . ' ' . ($conversationRelation['title'] ?? '')) }}"
                         >
                             <a href="{{ $conversationUuid !== '' ? route($webRouteIndexName, ['uuid' => $conversationUuid]) : route($webRouteIndexName) }}" class="flex gap-2 items-start no-underline">
-                                @if($conversation->type?->name === 'group')
+                                @if($conversationIsGroup)
                                     <img src="{{ asset('assets/theme/media/group.webp') }}" class="rounded-full conv-avatar" alt="{{ $conversationName }}">
                                 @else
                                     <img src="{{ $resolveConversationAvatar($conversationPrimaryParticipant) }}" class="rounded-full conv-avatar" alt="{{ $conversationName }}">
                                 @endif
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center justify-between gap-2">
-                                        <p class="name m-0 truncate font-semibold">{{ $conversationName }}</p>
+                                        <div class="flex items-center gap-2 min-w-0 name-row">
+                                            <p class="name m-0 truncate font-semibold">{{ $conversationName }}</p>
+                                            @if($conversationRelation)
+                                                <span class="conversation-relation-badge inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[11px] leading-4"
+                                                      title="{{ $conversationRelation['description'] }}">
+                                                    {{ $conversationRelation['label'] }}
+                                                </span>
+                                            @endif
+                                        </div>
                                         <span class="conversation-count-new-messages inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white"
                                               @if(!$conversation->hasUnreadedMessages()) style="display:none" @endif>{{ $conversation->getCountUnreadedMessages() }}</span>
                                     </div>
-                                    @if($conversationTitle !== '')
-                                        <p class="title m-0 text-xs text-slate-500 truncate">{{ $conversationTitle }}</p>
-                                    @endif
                                     <p class="preview m-0 text-xs text-slate-500 truncate">
                                         @php
                                             $lastMessageSender = $conversation?->lastMessage?->sender;
@@ -134,7 +261,7 @@
                                         @elseif($lastMessageSender)
                                             <span>{{ $resolveConversationUserName($lastMessageSender) ?: '@user' }}:</span>
                                         @endif
-                                        {{ Str::limit($previewText, 60) }}
+                                        {{ $previewTextForDisplay }}
                                     </p>
                                 </div>
                             </a>
@@ -158,7 +285,7 @@
                         </span>
                         <div class="flex-1 min-w-0">
                             <p class="m-0 truncate text-sm font-semibold">
-                                @if(in_array($currentConversation->type?->name, ['single', 'expert', 'cooperation'], true))
+                                @if(!$currentConversationIsGroup && $currentConversation->type?->name !== 'support')
                                     {{ $resolveConversationUserName($currentConversationPrimaryParticipant) ?: ($currentConversation->title ?: __('Conversation')) }}
                                 @elseif($currentConversation->type?->name === 'support')
                                     {{ __('Support') }}
@@ -167,6 +294,21 @@
                                 @endif
                             </p>
                             <p class="m-0 truncate text-xs text-slate-500 conversation-title">{{ $currentConversation->title ?? '' }}</p>
+                            @if($currentConversationRelation)
+                                <p class="m-0 truncate text-xs text-slate-500 conversation-relation">
+                                    <span>{{ __('Relation') }}:</span>
+                                    @if(($currentConversationRelation['url'] ?? '') !== '')
+                                        <a href="{{ $currentConversationRelation['url'] }}" class="no-underline" target="_blank" rel="noopener">
+                                            {{ $currentConversationRelation['label'] }}
+                                        </a>
+                                    @else
+                                        {{ $currentConversationRelation['label'] }}
+                                    @endif
+                                    @if(($currentConversationRelation['title'] ?? '') !== '')
+                                        <span class="conversation-relation-title">- {{ $currentConversationRelation['title'] }}</span>
+                                    @endif
+                                </p>
+                            @endif
                         </div>
                     </div>
                 </div>
