@@ -430,6 +430,24 @@ class MessagesController extends Controller
             ], 403);
         }
 
+        $message = ConversationMessage::query()
+            ->where('id', $messageId)
+            ->where('conversation_uuid', $uuid)
+            ->first();
+
+        if (!$message) {
+            return response()->json([
+                'message' => trans('conversations::conversations.message.not_found'),
+            ], 404);
+        }
+
+        // Message can be deleted for all participants only by its sender.
+        if ((string) ($message->{get_sender_key()} ?? '') !== (string) $userId) {
+            return response()->json([
+                'message' => trans('conversations::conversations.conversation.unauthorized'),
+            ], 403);
+        }
+
         app('conversations')->markAsDeleted($uuid, $messageId, $userId);
 
         return response()->json([

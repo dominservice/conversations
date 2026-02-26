@@ -696,8 +696,7 @@ class Conversations
      */
     public function markAs($convUuid, $msgId, $userId, $status): void
     {
-        $messageStatus = ConversationMessageStatus::whereHas('message', function ($q) use ($userId, $convUuid) {
-            $q->where(get_sender_key(), '!=', $userId);
+        $messageStatus = ConversationMessageStatus::whereHas('message', function ($q) use ($convUuid) {
             $q->where('conversation_uuid', $convUuid);
         })
             ->where('status', '!=', $status)
@@ -778,7 +777,25 @@ class Conversations
             return;
         }
 
-        $this->markAs($convUuid, $msgId, $userId, self::DELETED);
+        $message = ConversationMessage::query()
+            ->where('id', $msgId)
+            ->where('conversation_uuid', $convUuid)
+            ->first();
+
+        if (!$message) {
+            return;
+        }
+
+        // Deleting own message removes it for every participant.
+        if ((string) ($message->{get_sender_key()} ?? '') === (string) $userId) {
+            ConversationMessageStatus::query()
+                ->where('message_id', $msgId)
+                ->where('status', '!=', self::DELETED)
+                ->update(['status' => self::DELETED]);
+        } else {
+            // For non-owner fallback to per-user delete state.
+            $this->markAs($convUuid, $msgId, $userId, self::DELETED);
+        }
 
         // Broadcast the message deleted event
         if ($this->broadcastManager && $this->broadcastManager->enabled()) {
