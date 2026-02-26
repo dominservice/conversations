@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Dominservice\Conversations\Facade\ConversationsHooks;
+use Illuminate\Support\Collection;
 
 class MessagesController extends Controller
 {
@@ -56,7 +57,22 @@ class MessagesController extends Controller
             ->get()
             ->keyBy('id');
 
-        $messages = collect($messages)->map(function ($message) use ($messagesById, $uuid) {
+        $statusTable = (string) config('conversations.tables.conversation_message_statuses');
+        $statusUserKey = get_user_key();
+        $messageStatuses = collect();
+        if ($messageIds->isNotEmpty()) {
+            $messageStatuses = DB::table($statusTable)
+                ->whereIn('message_id', $messageIds->all())
+                ->where('self', 0)
+                ->whereIn('status', [Conversations::READ, Conversations::UNREAD])
+                ->select(['message_id', $statusUserKey, 'status'])
+                ->get()
+                ->groupBy(static fn ($row) => (int) ($row->message_id ?? 0));
+        }
+
+        $participantIds = $this->resolveConversationParticipantIds($conversation);
+
+        $messages = collect($messages)->map(function ($message) use ($messagesById, $uuid, $messageStatuses, $participantIds, $statusUserKey) {
             $messageId = (int) ($message->message_id ?? $message->id ?? 0);
             $messageModel = $messagesById->get($messageId);
             $sender = $messageModel?->sender;
@@ -67,6 +83,19 @@ class MessagesController extends Controller
                 ?? $message->sender_id
                 ?? ''
             );
+            $statusRows = collect($messageStatuses->get($messageId, collect()));
+            $readBy = $this->extractStatusUserIds($statusRows, Conversations::READ, $statusUserKey, $senderId);
+            $unreadBy = $this->extractStatusUserIds($statusRows, Conversations::UNREAD, $statusUserKey, $senderId);
+
+            // If status rows are not complete (legacy data), infer unread participants.
+            if (empty($unreadBy) && !empty($participantIds)) {
+                $unreadBy = collect($participantIds)
+                    ->map(static fn ($id) => (string) $id)
+                    ->filter(static fn ($id) => $id !== '')
+                    ->reject(static fn ($id) => $id === $senderId || in_array($id, $readBy, true))
+                    ->values()
+                    ->all();
+            }
 
             return [
                 'id' => $messageId,
@@ -84,6 +113,10 @@ class MessagesController extends Controller
                 'sender_avatar' => (string) ($sender?->avatar_path ?? ''),
                 'sender' => $this->normalizeSender($sender),
                 'attachments' => $messageModel?->attachments?->values()?->toArray() ?? [],
+                'read_by' => $readBy,
+                'unread_by' => $unreadBy,
+                'read_count' => count($readBy),
+                'unread_count' => count($unreadBy),
             ];
         })->values();
 
@@ -188,6 +221,59 @@ class MessagesController extends Controller
         if (!empty($payload)) {
             DB::table($statusesTable)->insertOrIgnore($payload);
         }
+    }
+
+    /**
+     * Resolve conversation participant IDs as strings.
+     *
+     * @param mixed $conversation
+     * @return array<int, string>
+     */
+    protected function resolveConversationParticipantIds($conversation): array
+    {
+        if (!$conversation) {
+            return [];
+        }
+
+        $users = collect($conversation->users ?? []);
+        if ($users->isEmpty()) {
+            $users = collect($conversation->participants ?? []);
+        }
+
+        return $users
+            ->map(function ($user) {
+                if (!$user) {
+                    return '';
+                }
+
+                $keyName = method_exists($user, 'getKeyName') ? $user->getKeyName() : 'id';
+                return (string) ($user->{$keyName} ?? $user->uuid ?? $user->id ?? '');
+            })
+            ->filter(static fn ($id) => $id !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Extract user IDs for a specific message status.
+     *
+     * @param Collection<int, mixed> $statusRows
+     * @param int $status
+     * @param string $statusUserKey
+     * @param string $senderId
+     * @return array<int, string>
+     */
+    protected function extractStatusUserIds(Collection $statusRows, int $status, string $statusUserKey, string $senderId = ''): array
+    {
+        return $statusRows
+            ->filter(static fn ($row) => (int) ($row->status ?? -1) === $status)
+            ->map(static fn ($row) => (string) ($row->{$statusUserKey} ?? ''))
+            ->filter(static fn ($id) => $id !== '')
+            ->reject(static fn ($id) => $senderId !== '' && $id === $senderId)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

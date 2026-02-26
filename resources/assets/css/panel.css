@@ -207,6 +207,20 @@
     text-align: right;
 }
 
+.conversations-panel .conversation-message-read-receipt {
+    display: block;
+    clear: both;
+    margin-top: 2px;
+    margin-left: 42px;
+    line-height: 1.3;
+}
+
+.conversations-panel .conversations-messages-item.sent .conversation-message-read-receipt {
+    margin-left: 0;
+    margin-right: 42px;
+    text-align: right;
+}
+
 .conversations-panel .conv-composer {
     background: var(--conv-surface);
 }

@@ -193,6 +193,20 @@ return array(
 
     /*
     |--------------------------------------------------------------------------
+    | Read Receipts Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Controls read receipt payload and realtime updates for conversation UI.
+    |
+    */
+    'read_receipts' => [
+        'enabled' => env('CONVERSATIONS_READ_RECEIPTS_ENABLED', true),
+        'show_unread_in_group' => env('CONVERSATIONS_READ_RECEIPTS_SHOW_UNREAD_IN_GROUP', true),
+        'broadcast_on_mark_all' => env('CONVERSATIONS_READ_RECEIPTS_BROADCAST_ON_MARK_ALL', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Hooks Configuration
     |--------------------------------------------------------------------------
     |

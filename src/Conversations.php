@@ -826,6 +826,8 @@ class Conversations
      */
     public function markReadAll($convUuid, $userId)
     {
+        $broadcastReadReceipts = (bool) config('conversations.read_receipts.broadcast_on_mark_all', true);
+
         $messageStatuses = ConversationMessageStatus::whereHas('message', function ($q) use ($userId, $convUuid) {
             $q->where(get_sender_key(), '!=', $userId);
             $q->where('conversation_uuid', $convUuid);
@@ -838,6 +840,14 @@ class Conversations
             foreach ($messageStatuses as $messageStatus) {
                 $messageStatus->status = self::READ;
                 $messageStatus->save();
+
+                if (
+                    $broadcastReadReceipts
+                    && $this->broadcastManager
+                    && $this->broadcastManager->enabled()
+                ) {
+                    $this->broadcastManager->broadcast(new MessageRead($convUuid, (int) $messageStatus->message_id, $userId));
+                }
             }
         }
     }

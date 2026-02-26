@@ -382,6 +382,7 @@
                 conversation_title_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/title' }}',
                 add_participant_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/participants' }}',
                 conversation_uuid: '{{ $currentConversationUuid }}',
+                current_conversation_is_group: {{ $currentConversationIsGroup ? 'true' : 'false' }},
                 delete_message_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/messages/' }}',
                 get_messages_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/messages' }}',
                 typing_route: '{{ $conversationApiBase . '/' . $currentConversationUuid . '/typing' }}',
@@ -395,9 +396,15 @@
                 attachment_input_selector: '.conversation-attachments-input',
                 participants_map: @json($participantsMap),
                 current_user: @json($currentUserMap),
+                read_receipts_enabled: {{ config('conversations.read_receipts.enabled', true) ? 'true' : 'false' }},
+                read_receipts_show_unread_in_group: {{ config('conversations.read_receipts.show_unread_in_group', true) ? 'true' : 'false' }},
                 texts: {
                     attachment: attachmentFallbackText,
-                    confirm_delete: deleteConfirmText
+                    confirm_delete: deleteConfirmText,
+                    read: @json(__('Read')),
+                    sent: @json(__('Sent')),
+                    read_by: @json(__('Read by')),
+                    unread_by: @json(__('Unread by'))
                 }
             });
 

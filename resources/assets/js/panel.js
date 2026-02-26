@@ -24,6 +24,9 @@ var Conversations = function () {
     let attachmentInputSelector = '[name="attachments[]"]';
     let participantsMap = {};
     let currentUser = {};
+    let currentConversationIsGroup = false;
+    let readReceiptsEnabled = true;
+    let readReceiptsShowUnreadInGroup = true;
     let typingDebounce = null;
     let typingUsersTimers = {};
     let messagesRequestInFlight = false;
@@ -129,6 +132,15 @@ var Conversations = function () {
         if (typeof params.current_user !== 'undefined') {
             currentUser = params.current_user || {};
             currentUser.avatar_path = normalizeAvatarPath(currentUser.avatar_path);
+        }
+        if (typeof params.current_conversation_is_group !== 'undefined') {
+            currentConversationIsGroup = Boolean(params.current_conversation_is_group);
+        }
+        if (typeof params.read_receipts_enabled !== 'undefined') {
+            readReceiptsEnabled = Boolean(params.read_receipts_enabled);
+        }
+        if (typeof params.read_receipts_show_unread_in_group !== 'undefined') {
+            readReceiptsShowUnreadInGroup = Boolean(params.read_receipts_show_unread_in_group);
         }
         if (typeof params.texts !== 'undefined') { texts = params.texts || {}; }
     };
@@ -363,6 +375,220 @@ var Conversations = function () {
         ).toString();
     };
 
+    const normalizeUserId = (value) => {
+        return (value ?? '').toString().trim();
+    };
+
+    const extractReceiptUserId = (entry) => {
+        if (entry === null || typeof entry === 'undefined') {
+            return '';
+        }
+
+        if (typeof entry === 'string' || typeof entry === 'number') {
+            return normalizeUserId(entry);
+        }
+
+        if (typeof entry === 'object') {
+            return normalizeUserId(
+                entry.id
+                || entry.uuid
+                || entry.user_id
+                || entry.user_uuid
+                || entry.value
+            );
+        }
+
+        return '';
+    };
+
+    const normalizeReceiptUserIds = (items) => {
+        if (!Array.isArray(items)) {
+            return [];
+        }
+
+        return Array.from(new Set(items
+            .map((entry) => extractReceiptUserId(entry))
+            .filter((id) => id !== '')));
+    };
+
+    const getConversationParticipantIds = () => {
+        const ids = Object.keys(participantsMap || {}).map((id) => normalizeUserId(id));
+        return Array.from(new Set(ids
+            .concat(getCurrentUserIdentifiers())
+            .filter((id) => id !== '')));
+    };
+
+    const isGroupConversationContext = () => {
+        if (currentConversationIsGroup === true) {
+            return true;
+        }
+
+        const activeConversationItem = getConversationListItem(conversationUuid);
+        if (activeConversationItem.length > 0) {
+            return (activeConversationItem.attr('data-conversation-is-group') || '').toString() === '1';
+        }
+
+        const participantCount = getConversationParticipantIds().length;
+        return participantCount > 2;
+    };
+
+    const resolveReceiptUserDisplayName = (userId) => {
+        const normalizedUserId = normalizeUserId(userId);
+        if (normalizedUserId === '') {
+            return '@user';
+        }
+
+        const userMeta = resolveUserMeta(normalizedUserId);
+        if (!userMeta) {
+            return normalizedUserId;
+        }
+
+        return userMeta.username
+            || userMeta.full_name
+            || userMeta.name
+            || normalizedUserId;
+    };
+
+    const parseReceiptStateValue = (rawValue) => {
+        if (Array.isArray(rawValue)) {
+            return normalizeReceiptUserIds(rawValue);
+        }
+
+        const textValue = (rawValue ?? '').toString().trim();
+        if (textValue === '') {
+            return [];
+        }
+
+        try {
+            const parsed = JSON.parse(textValue);
+            return normalizeReceiptUserIds(parsed);
+        } catch (e) {
+            return normalizeReceiptUserIds(textValue.split(','));
+        }
+    };
+
+    const getMessageReceiptState = (messageEl) => {
+        return {
+            readBy: parseReceiptStateValue(messageEl.attr('data-read-by')),
+            unreadBy: parseReceiptStateValue(messageEl.attr('data-unread-by')),
+            senderId: normalizeUserId(messageEl.attr('data-sender-id')),
+        };
+    };
+
+    const setMessageReceiptState = (messageEl, readBy, unreadBy, senderId = '') => {
+        const normalizedReadBy = normalizeReceiptUserIds(readBy);
+        const normalizedUnreadBy = normalizeReceiptUserIds(unreadBy)
+            .filter((id) => !normalizedReadBy.includes(id));
+
+        messageEl.attr('data-read-by', JSON.stringify(normalizedReadBy));
+        messageEl.attr('data-unread-by', JSON.stringify(normalizedUnreadBy));
+        if (senderId !== '') {
+            messageEl.attr('data-sender-id', senderId);
+        }
+    };
+
+    const ensureUnreadReceiptUserIds = (readBy, senderId, unreadBy = []) => {
+        const normalizedSenderId = normalizeUserId(senderId);
+        const existingUnread = normalizeReceiptUserIds(unreadBy);
+        if (existingUnread.length > 0) {
+            return existingUnread
+                .filter((id) => id !== normalizedSenderId && !readBy.includes(id));
+        }
+
+        return getConversationParticipantIds()
+            .filter((participantId) => participantId !== normalizedSenderId)
+            .filter((participantId) => !readBy.includes(participantId));
+    };
+
+    const renderMessageReadReceipt = (messageEl) => {
+        if (!readReceiptsEnabled || !messageEl.length || !messageEl.hasClass('sent')) {
+            messageEl.find('.conversation-message-read-receipt').remove();
+            return;
+        }
+
+        const state = getMessageReceiptState(messageEl);
+        const senderId = state.senderId || normalizeUserId(messageEl.attr('data-sender-id'));
+        const readBy = state.readBy.filter((id) => id !== senderId);
+        const unreadBy = state.unreadBy.filter((id) => id !== senderId && !readBy.includes(id));
+        const isGroupConversation = isGroupConversationContext();
+
+        let receiptText = '';
+        if (!isGroupConversation) {
+            receiptText = readBy.length > 0
+                ? t('read', 'Read')
+                : t('sent', 'Sent');
+        } else {
+            const chunks = [];
+            if (readBy.length > 0) {
+                chunks.push(t('read_by', 'Read by') + ': ' + readBy.map((id) => resolveReceiptUserDisplayName(id)).join(', '));
+            }
+            if (readReceiptsShowUnreadInGroup && unreadBy.length > 0) {
+                chunks.push(t('unread_by', 'Unread by') + ': ' + unreadBy.map((id) => resolveReceiptUserDisplayName(id)).join(', '));
+            }
+            receiptText = chunks.join(' | ');
+            if (receiptText === '') {
+                receiptText = t('sent', 'Sent');
+            }
+        }
+
+        let receiptEl = messageEl.find('.conversation-message-read-receipt').first();
+        if (!receiptEl.length) {
+            const dateEl = messageEl.find('.conversation-message-date').first();
+            if (dateEl.length) {
+                dateEl.after('<small class="conversation-message-read-receipt text-muted small d-block"></small>');
+            } else {
+                messageEl.append('<small class="conversation-message-read-receipt text-muted small d-block"></small>');
+            }
+            receiptEl = messageEl.find('.conversation-message-read-receipt').first();
+        }
+
+        receiptEl.text(receiptText);
+    };
+
+    const applyMessageReadReceipt = (messageEl, message) => {
+        if (!messageEl.length || !messageEl.hasClass('sent') || !readReceiptsEnabled) {
+            return;
+        }
+
+        const senderId = normalizeUserId(message?.sender_id || message?.sender_uuid || messageEl.attr('data-sender-id'));
+        const readBy = normalizeReceiptUserIds(message?.read_by || []);
+        const unreadBy = ensureUnreadReceiptUserIds(readBy, senderId, message?.unread_by || []);
+
+        setMessageReceiptState(messageEl, readBy, unreadBy, senderId);
+        renderMessageReadReceipt(messageEl);
+    };
+
+    const applyReadReceiptFromReadEvent = (eventPayload) => {
+        if (!readReceiptsEnabled) {
+            return;
+        }
+
+        const messageId = normalizeUserId(eventPayload?.message_id || eventPayload?.id);
+        if (messageId === '') {
+            return;
+        }
+
+        const messageEl = $('.conversations-messages-item[data-message-id="' + messageId + '"]').first();
+        if (!messageEl.length || !messageEl.hasClass('sent')) {
+            return;
+        }
+
+        const state = getMessageReceiptState(messageEl);
+        const readerId = normalizeUserId(eventPayload?.user_id || eventPayload?.userId || extractReceiptUserId(eventPayload?.user));
+        const payloadReadBy = normalizeReceiptUserIds(eventPayload?.read_by || []);
+
+        let readBy = state.readBy.slice();
+        if (payloadReadBy.length > 0) {
+            readBy = payloadReadBy;
+        } else if (readerId !== '' && !readBy.includes(readerId)) {
+            readBy.push(readerId);
+        }
+
+        const unreadBy = ensureUnreadReceiptUserIds(readBy, state.senderId, state.unreadBy);
+        setMessageReceiptState(messageEl, readBy, unreadBy, state.senderId);
+        renderMessageReadReceipt(messageEl);
+    };
+
     const normalizeMessage = (messageOrContent, createdAt, id, name, avatar, direction, attachments) => {
         if (typeof messageOrContent === 'object' && messageOrContent !== null) {
             const message = messageOrContent;
@@ -379,6 +605,9 @@ var Conversations = function () {
                 avatar: normalizeAvatarPath(message.sender_avatar || message.sender?.avatar_path || message.sender?.avatar || senderMeta?.avatar_path || senderMeta?.avatar || DEFAULT_AVATAR),
                 direction: direction || computedDirection,
                 attachments: normalizeAttachments(message.attachments || []),
+                sender_id: senderId,
+                read_by: message.read_by || [],
+                unread_by: message.unread_by || [],
             };
         }
 
@@ -390,6 +619,9 @@ var Conversations = function () {
             avatar: normalizeAvatarPath(avatar),
             direction: direction,
             attachments: normalizeAttachments(attachments || []),
+            sender_id: '',
+            read_by: [],
+            unread_by: [],
         };
     };
 
@@ -465,15 +697,35 @@ var Conversations = function () {
             return;
         }
 
+        const messageNode = $(html);
+        if (!messageNode.length) {
+            return;
+        }
+
         if (insertMode === 'append') {
-            messagesEl.append(html);
+            messagesEl.append(messageNode);
+            if (message.id) {
+                const renderedMessage = messagesEl.find('.conversations-messages-item[data-message-id="' + message.id + '"]').last();
+                if (renderedMessage.length) {
+                    renderedMessage.attr('data-sender-id', message.sender_id || '');
+                    applyMessageReadReceipt(renderedMessage, message);
+                }
+            }
             return;
         }
 
         if (isLoadMessages === true || insertMode === 'prepend') {
-            messagesEl.prepend(html);
+            messagesEl.prepend(messageNode);
         } else {
-            messagesEl.append(html);
+            messagesEl.append(messageNode);
+        }
+
+        if (message.id) {
+            const renderedMessage = messagesEl.find('.conversations-messages-item[data-message-id="' + message.id + '"]').first();
+            if (renderedMessage.length) {
+                renderedMessage.attr('data-sender-id', message.sender_id || '');
+                applyMessageReadReceipt(renderedMessage, message);
+            }
         }
     };
 
@@ -948,6 +1200,11 @@ var Conversations = function () {
             return;
         }
 
+        debugRealtime('subscribe conversation channel', {
+            channel: 'private-conversation.' + normalizedUuid,
+            conversation_uuid: normalizedUuid,
+        });
+
         const conversationChannel = typeof PusherConnect.subscribe === 'function'
             ? PusherConnect.subscribe(pusher, 'private-conversation.' + normalizedUuid)
             : pusher.subscribe('private-conversation.' + normalizedUuid);
@@ -957,6 +1214,16 @@ var Conversations = function () {
         }
 
         subscribedConversationChannels[normalizedUuid] = conversationChannel;
+
+        if (typeof conversationChannel.bind_global === 'function') {
+            conversationChannel.bind_global(function (eventName, payload) {
+                debugRealtime('event *', {
+                    channel: 'private-conversation.' + normalizedUuid,
+                    event: eventName,
+                    payload: payload,
+                });
+            });
+        }
 
         conversationChannel.bind('message.sent', function (payload) {
             debugRealtime('event message.sent', payload);
@@ -1040,6 +1307,10 @@ var Conversations = function () {
 
             if (payloadConversationUuid === conversationUuid || isCurrentUserIdentifier((eventPayload.user_id || eventPayload.userId || '').toString())) {
                 setConversationUnreadCount(listConversation, 0);
+            }
+
+            if (payloadConversationUuid === conversationUuid) {
+                applyReadReceiptFromReadEvent(eventPayload);
             }
         });
 
@@ -1130,9 +1401,24 @@ var Conversations = function () {
 
         const userId = getUserIdentifier();
         if (userId) {
+            debugRealtime('subscribe user conversation channel', {
+                channel: 'private-conversation.user.' + userId,
+                user_id: userId,
+            });
+
             const userChannel = typeof PusherConnect.subscribe === 'function'
                 ? PusherConnect.subscribe(pusher, 'private-conversation.user.' + userId)
                 : pusher.subscribe('private-conversation.user.' + userId);
+
+            if (userChannel && typeof userChannel.bind_global === 'function') {
+                userChannel.bind_global(function (eventName, payload) {
+                    debugRealtime('event user.*', {
+                        channel: 'private-conversation.user.' + userId,
+                        event: eventName,
+                        payload: payload,
+                    });
+                });
+            }
 
             userChannel.bind('message.sent', function (payload) {
                 debugRealtime('event user.message.sent', payload);
@@ -1181,6 +1467,10 @@ var Conversations = function () {
                     if (listConversation.length) {
                         setConversationUnreadCount(listConversation, 0);
                     }
+                }
+
+                if (payloadConversationUuid === conversationUuid) {
+                    applyReadReceiptFromReadEvent(eventPayload);
                 }
             });
 
