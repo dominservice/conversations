@@ -159,6 +159,21 @@
     $currentConversationUuid = $currentConversation ? $resolveConversationUuid($currentConversation) : '';
     $currentConversationIsGroup = $currentConversation ? $isGroupConversation($currentConversation) : false;
     $currentConversationRelation = $currentConversation ? $resolveConversationRelation($currentConversation) : null;
+    $isExpertConversation = static function ($conversation): bool {
+        return (string) ($conversation->type?->name ?? '') === 'expert';
+    };
+    $resolveExpertQuestionRelation = static function ($conversation) {
+        return collect($conversation->relations ?? [])->first(function ($relation) {
+            return (string) ($relation->ulid_parent_type ?? '') === 'expert_questions';
+        });
+    };
+    $currentConversationExpertQuestionRelation = $currentConversation ? $resolveExpertQuestionRelation($currentConversation) : null;
+    $canCreateExpertContentFromConversation = $currentConversation
+        && $isExpertConversation($currentConversation)
+        && $authUser
+        && $authUser->expert
+        && (int) $authUser->expert->status === \App\Models\Expert::IS_ACCEPTED
+        && (string) ($currentConversation->owner_uuid ?? '') !== (string) $authUser->uuid;
     $authUserIdentifiers = collect([
         $authUser?->{$authUser?->getKeyName() ?? 'id'} ?? null,
         $authUser?->id ?? null,
@@ -231,6 +246,7 @@
                                         : (in_array($lastMessageType, ['attachment', 'file', 'image', 'document', 'video', 'audio'], true) ? __('Attachment') : ''),
                                     60
                                 );
+                                $conversationIsExpert = $isExpertConversation($conversation);
                             @endphp
                             <li
                                 class="contact conv-list-item @if($currentConversation && $conversationUuid !== '' && $conversationUuid === $currentConversationUuid) active @endif"
@@ -252,6 +268,10 @@
                                                 @if($conversationRelation)
                                                     <span class="badge rounded-pill conversation-relation-badge" title="{{ $conversationRelation['description'] }}">
                                                         {{ $conversationRelation['label'] }}
+                                                    </span>
+                                                @elseif($conversationIsExpert)
+                                                    <span class="badge rounded-pill bg-light-warning text-warning-emphasis" title="{{ __('Expert question') }}">
+                                                        {{ __('Expert question') }}
                                                     </span>
                                                 @endif
                                             </div>
@@ -317,6 +337,13 @@
                                 <p class="mb-0 small text-muted conversation-title text-truncate">
                                     {{ $currentConversation->title ?? '' }}
                                 </p>
+                                @if($isExpertConversation($currentConversation))
+                                    <p class="mb-0 small text-muted text-truncate">
+                                        <span class="badge rounded-pill bg-light-warning text-warning-emphasis">
+                                            @lang('Expert question')
+                                        </span>
+                                    </p>
+                                @endif
                                 @if($currentConversationRelation)
                                     <p class="mb-0 small text-muted conversation-relation text-truncate">
                                         <span>@lang('Relation'):</span>
@@ -334,8 +361,25 @@
                                 @endif
                             </div>
 
-                            @if($currentConversation->type?->name !== 'support' && $canManageConversation)
+                            @if($currentConversation->type?->name !== 'support' && ($canManageConversation || $canCreateExpertContentFromConversation))
                                 <span class="conversation-actions d-flex gap-1">
+                                    @if($canCreateExpertContentFromConversation)
+                                        @if($currentConversationExpertQuestionRelation)
+                                            <a href="{{ route('expert.questions.edit', $currentConversationExpertQuestionRelation->ulid_parent_id) }}"
+                                               class="btn btn-sm btn-outline-warning"
+                                               title="@lang('Edit expert content')">
+                                                <i class="fa fa-pen-to-square"></i>
+                                            </a>
+                                        @else
+                                            <form method="POST" action="{{ route('expert.questions.fromConversation', $currentConversationUuid) }}" class="d-inline">
+                                                @csrf
+                                                <button class="btn btn-sm btn-outline-warning" type="submit" title="@lang('Create expert content')">
+                                                    <i class="fa fa-wand-magic-sparkles"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    @endif
+                                    @if($canManageConversation)
                                     <button class="btn btn-sm btn-outline-primary conversation-change-title" type="button" title="@lang('Edit')">
                                         <i class="fa fa-edit"></i>
                                     </button>
@@ -343,6 +387,7 @@
                                         <button class="btn btn-sm btn-outline-success conversation-add-participant" type="button" title="@lang('Add')">
                                             <i class="fa fa-user-plus"></i>
                                         </button>
+                                    @endif
                                     @endif
                                 </span>
                             @endif
