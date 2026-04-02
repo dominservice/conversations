@@ -28,7 +28,7 @@ A powerful, flexible, and feature-rich messaging system for Laravel applications
 |-----------------|-----------------------|
 | 1.*             | 5.6 - 9.*             |
 | 2.*             | 8.* - 11.*            |
-| 3.*             | 9.* - 12.*            |
+| 3.*             | 9.* - 13.*            |
 
 > **Note:** Version 3.0.0 introduces significant new features including real-time broadcasting, hooks system, API endpoints, and multilingual support.
 
