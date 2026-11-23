@@ -1,14 +1,15 @@
+# Laravel Conversations
 
-[![Packagist](https://img.shields.io/packagist/v/dominservice/conversations.svg)]()
+Laravel Conversations adds private and group messaging to Laravel applications, with attachments, REST and GraphQL APIs, and real-time broadcasting.
+
+Developed by Mateusz Domin at [Domin Software](https://dominsoftware.it/).
+
+[![Packagist](https://img.shields.io/packagist/v/dominservice/conversations.svg)](https://packagist.org/packages/dominservice/conversations)
 [![Latest Version](https://img.shields.io/github/release/dominservice/conversations.svg?style=flat-square)](https://github.com/dominservice/conversations/releases)
 [![Total Downloads](https://img.shields.io/packagist/dt/dominservice/conversations.svg?style=flat-square)](https://packagist.org/packages/dominservice/conversations)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
 
-# Laravel Conversations - Complete Messaging System
-
-A powerful, flexible, and feature-rich messaging system for Laravel applications. Build real-time chat, messaging platforms, support systems, and communication tools with ease.
-
-## Features
+## Key Features
 
 - 💬 **Complete Messaging System** - Private and group conversations with full message history
 - ⚡ **Real-time Communication** - Built-in broadcasting support for instant messaging
@@ -19,10 +20,10 @@ A powerful, flexible, and feature-rich messaging system for Laravel applications
 - 🪝 **Extensible Hook System** - Customize behavior without modifying core code
 - 🌍 **Multilingual Support** - Easily translate all messages to any language
 - 📱 **Mobile-Friendly** - Works seamlessly with mobile applications
-- 🔒 **Secure** - Built with security best practices including virus scanning for attachments
+- 🔒 **Attachment controls** - File validation and optional scanning when configured
 - 📝 **TypeScript Support** - Type definitions for Vue and React components
 
-## Compatibility
+## Requirements
 
 | Package Version | Laravel Compatibility |
 |-----------------|-----------------------|
@@ -77,29 +78,17 @@ php artisan vendor:publish --tag=conversations
 php artisan migrate
 ```
 
-### 4. Register Service Provider (Laravel < 5.5)
-
-For Laravel 5.5 and above, the package will be auto-discovered. For older versions, add the service provider to `config/app.php`:
-
-```php
-'providers' => [
-    // Other service providers...
-    Dominservice\Conversations\ConversationsServiceProvider::class,
-],
-
-'aliases' => [
-    // Other aliases...
-    'Conversations' => Dominservice\Conversations\Facade\Conversations::class,
-]
-```
-
-> **Note:** If you're experiencing issues with the package not appearing in the vendor:publish list, make sure your application has properly registered the service provider. You can manually register it in your `config/app.php` file even if you're using Laravel 5.5+ to ensure it's loaded correctly.
+Laravel discovers the package provider automatically. If your application disables Composer package discovery, register `Dominservice\Conversations\ConversationsServiceProvider` explicitly.
 
 ## Quick Start
 
-### Basic Usage
+### Create a conversation
+
+Use two existing user IDs. This example creates their conversation and retrieves its messages as the first participant.
 
 ```php
+use Dominservice\Conversations\Facade\Conversations;
+
 // Create a new conversation
 $conversationId = Conversations::create([$user1Id, $user2Id], null, null, 'Hello!');
 
@@ -514,18 +503,23 @@ conversation_mark_as_read($conversationId, $messageId, $userId);
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## Support
+
+Report package issues on [GitHub](https://github.com/dominservice/conversations/issues).
+
+If this package helps you, you can buy me a coffee to support its maintenance.
+
+[![Buy me a coffee on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/dominservice)
+
 ## License
 
 This package is open-sourced software licensed under the [MIT license](LICENSE).
 
 ## Credits
 
-- [dominservice](https://github.com/dominservice)
+- [Mateusz Domin](https://github.com/dominservice)
 - [tzookb/tbmsg](https://github.com/tzookb/tbmsg) (Original inspiration)
-- [All Contributors](../../contributors)
-
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/dominservice)
+- [All Contributors](https://github.com/dominservice/conversations/graphs/contributors)
 
 ## Server-Rendered Web Panel (v3)
 

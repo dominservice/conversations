@@ -1,17 +1,22 @@
 {
     "name": "dominservice/conversations",
     "type": "library",
-    "description": "This package will allow you to add a full user messaging system into your Laravel application.",
-    "keywords": ["laravel", "php", "messaging", "message-system", "chat", "laravel-messenger", "conversations"],
+    "description": "Private and group messaging for Laravel with attachments, REST and GraphQL APIs, and real-time broadcasting.",
+    "keywords": ["laravel", "messaging", "chat", "graphql", "broadcasting"],
     "homepage": "https://github.com/dominservice/conversations",
     "license": "MIT",
     "authors": [
         {
-            "name": "dominservice",
-            "email": "biuro@dso.biz.pl",
-            "role": "Developer"
+            "name": "Mateusz Domin",
+            "email": "biuro@dominsoftware.it",
+            "role": "Developer",
+            "homepage": "https://dominsoftware.it/"
         }
     ],
+    "support": {
+        "source": "https://github.com/dominservice/conversations",
+        "issues": "https://github.com/dominservice/conversations/issues"
+    },
     "require": {
         "php": ">=8.1",
         "laravel/framework": "^9|^10|^11|^12|^13",
@@ -30,7 +35,6 @@
         "orchestra/testbench": "^7.0|^8.0|^9.0|^10.0|^11.0",
         "mockery/mockery": "^1.4"
     },
-    "require-all": true,
     "autoload": {
         "psr-4": {
             "Dominservice\\Conversations\\": "src/"

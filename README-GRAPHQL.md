@@ -4,13 +4,7 @@ This package provides a GraphQL API for the Laravel Conversations package, allow
 
 ## Installation
 
-The GraphQL API is included in the package, but requires the [Lighthouse PHP](https://lighthouse-php.com/) package to be installed in your Laravel application.
-
-```bash
-composer require nuwave/lighthouse
-```
-
-After installing Lighthouse, publish its configuration:
+Laravel Conversations 3.6 installs [Lighthouse PHP](https://lighthouse-php.com/) as a Composer dependency. Publish its configuration after installing Conversations.
 
 ```bash
 php artisan vendor:publish --provider="Nuwave\Lighthouse\LighthouseServiceProvider" --tag=config
